@@ -1,7 +1,7 @@
 import { ThemedText } from "@/components/ThemedText";
 import { StyleSheet, View } from "react-native";
 
-export default function TabTwoScreen() {
+export default function WorkoutsScreen() {
   return (
     <View style={styles.container}>
       <ThemedText style={styles.text}>Workout page to be done.</ThemedText>
