@@ -93,7 +93,7 @@ export default function Index() {
   // Show a loading spinner while checking authentication state
   if (initializing) {
     return (
-      <View style={[styles.container, styles.centerContent]}>
+      <View style={[styles.container]}>
         <ActivityIndicator size="large" color="#1e90ff" />
       </View>
     );
@@ -101,7 +101,11 @@ export default function Index() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Login / Signup</Text>
+        <Text style={styles.logoText}>gymAll</Text>
+
+      <Text style={styles.welcome}>Welcome Back!</Text>
+      <Text style={styles.message}>Login to your account!</Text>
+
       <TextInput
         style={styles.input}
         placeholder="Email"
@@ -121,28 +125,26 @@ export default function Index() {
         secureTextEntry
         editable={!loading}
       />
+
       <TouchableOpacity
-        style={[styles.button, loading && styles.disabledButton]}
+        style={[styles.loginButton, loading && styles.disabledButton]}
         onPress={handleSignIn}
         disabled={loading}
       >
         {loading ? (
           <ActivityIndicator size="small" color="#fff" />
         ) : (
-          <Text style={styles.buttonText}>Login</Text>
+          <Text style={styles.loginText}>Login</Text>
         )}
       </TouchableOpacity>
-      <TouchableOpacity
-        style={[
-          styles.button,
-          styles.signupButton,
-          loading && styles.disabledButton,
-        ]}
-        onPress={handleSignUp}
-        disabled={loading}
-      >
-        <Text style={styles.buttonText}>Sign Up</Text>
-      </TouchableOpacity>
+      <Text style={styles.forgotText}>Forgot Password?</Text>
+
+      <Text style={styles.signupText}>
+        Don't have an account?{ " "}
+        <Text style={styles.signupLink} onPress={handleSignUp}>
+          Sign Up
+          </Text>
+        </Text>
     </View>
   );
 }
@@ -150,48 +152,74 @@ export default function Index() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#000",
+    backgroundColor: "#F4F7FB",
     justifyContent: "center",
     alignItems: "center",
-    padding: 20,
+    padding: 24,
   },
-  centerContent: {
-    justifyContent: "center",
+  logoIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: 20,
     alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#1D2951",
   },
-  header: {
-    fontSize: 24,
+  logoText: {
     color: "#fff",
-    marginBottom: 40,
+    fontSize: 36,
+    fontWeight: "bold"
+  },
+  welcome: {
+    fontSize: 24,
+    fontWeight: "600",
+    marginBottom: 4,
+    color: "#333",
+  },
+  message: {
+    fontSize: 14,
+    color: "#777",
+    marginBottom: 24,
   },
   input: {
     width: "100%",
-    height: 50,
-    borderColor: "#444",
+    height: 48,
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    marginBottom: 16,
     borderWidth: 1,
-    borderRadius: 10,
-    marginBottom: 20,
-    paddingHorizontal: 15,
-    color: "#fff",
-    backgroundColor: "#111",
+    borderColor: "#ddd",
   },
-  button: {
+  loginButton: {
     width: "100%",
-    height: 50,
-    backgroundColor: "#1e90ff",
-    borderRadius: 10,
-    justifyContent: "center",
+    backgroundColor: "#1D2951",
+    borderRadius: 8,
+    paddingVertical: 12,
     alignItems: "center",
-    marginTop: 10,
+    marginTop: 8,
   },
-  signupButton: {
-    backgroundColor: "#32cd32", // green for signup
+  loginText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  forgotText: {
+    color: "888",
+    marginTop: 12,
+    fontSize: 13,
+  },
+  signupText: {
+    marginTop: 20,
+    fontSize: 14,
+    color: "#888",
+  },
+  signupLink: {
+    color: "1D2951",
+    fontWeight: "bold",
   },
   disabledButton: {
     opacity: 0.6,
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
   },
 });
