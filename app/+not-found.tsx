@@ -1,6 +1,7 @@
 import { ThemedText } from "@/components/ThemedText";
 import { Link, Stack } from "expo-router";
 import { StyleSheet, View } from "react-native";
+import React, { useEffect } from "react";
 
 export default function NotFoundScreen() {
   return (
