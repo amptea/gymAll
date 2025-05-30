@@ -46,6 +46,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="scheduler"
+        options={{
+          title: "Scheduler",
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={28} name="table.fill" color={color} /> // table icon (looks like a calendar)
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: "Profile",

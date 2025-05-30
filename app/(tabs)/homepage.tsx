@@ -7,6 +7,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   View,
+  SafeAreaView,
 } from "react-native";
 import { auth } from "../../FirebaseConfig";
 
@@ -39,29 +40,49 @@ export default function HomepageScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <ThemedText style={styles.text}>Homepage to be done.</ThemedText>
-      <TouchableOpacity
-        style={styles.button}
-        onPress={handleSignOut}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator size="small" color="#ff4d4d" />
-        ) : (
-          <ThemedText style={styles.signOutText}>Sign Out</ThemedText>
-        )}
-      </TouchableOpacity>
-    </View>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.header}>
+        <ThemedText style={styles.headerText}>gymAll</ThemedText>
+      </View>
+      <View style={styles.container}>
+        <ThemedText style={styles.text}>Homepage to be done.</ThemedText>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={handleSignOut}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator size="small" color="#ff4d4d" />
+          ) : (
+            <ThemedText style={styles.signOutText}>Sign Out</ThemedText>
+          )}
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#000",
+  },
+  header: {
+    height: 40,
+    paddingHorizontal: 16,
+    justifyContent: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: "#222",
+  },
+  headerText: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#fff",
+  },
   container: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#000",
   },
   text: {
     color: "#fff",
