@@ -1,10 +1,127 @@
 import { ThemedText } from "@/components/ThemedText";
-import {View, StyleSheet } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Dimensions, Text } from 'react-native';
+import { CalendarList, DateData } from 'react-native-calendars';
+import { useState, useEffect } from 'react';
+import ScheduleWorkoutModal from '@/components/ScheduleWorkoutModal';
 
 export default function SchedulerScreen() {
+  const [selected, setSelected] = useState('');
+  const [hasEvents, setHasEvents] = useState(false);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+
+  // Get current date in local timezone
+  const getCurrentDate = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const [currentDate, setCurrentDate] = useState(getCurrentDate());
+
+  // Update current date
+  useEffect(() => {
+    // Update immediately on mount
+    setCurrentDate(getCurrentDate());
+
+    // Update every min
+    const interval = setInterval(() => {
+      setCurrentDate(getCurrentDate());
+    }, 60000);
+
+    // Cleanup
+    return () => {
+      clearInterval(interval);
+      setSelected('');
+    };
+  }, []);
+
+  // Create grey circle for selected date and orange circle for current date
+  const markedDates = {
+    [selected]: {
+      selected: true,
+      selectedColor: '#d3d3d3',
+      selectedTextColor: '#ffffff'
+    },
+    [currentDate]: {
+      selected: true,
+      selectedColor: '#ff9a02',
+      selectedTextColor: '#000000'
+    }
+  };
+
+  // If the selected date is the current date, prioritize the styling of the selected date
+  if (selected === currentDate) {
+    markedDates[currentDate] = {
+      ...markedDates[currentDate],
+      selectedColor: '#d3d3d3',
+      selectedTextColor: '#ffffff'
+    };
+  }
+
+  const handleSchedulePress = () => {
+    setIsModalVisible(true);
+  };
+
+  const handleModalClose = () => {
+    setIsModalVisible(false);
+    setSelected('');
+  };
+
   return (
     <View style={styles.container}>
-      <ThemedText style={styles.text}>Scheduler page to be done.</ThemedText>
+      <CalendarList
+        style={styles.calendar}
+        theme={{
+          backgroundColor: '#000000',
+          calendarBackground: '#000000',
+          textSectionTitleColor: '#ffffff',
+          selectedDayBackgroundColor: '#ffffff',
+          selectedDayTextColor: '#000000',
+          todayTextColor: '#ffffff',
+          dayTextColor: '#ffffff',
+          textDisabledColor: '#666666',
+          dotColor: '#00adf5',
+          monthTextColor: '#ffffff',
+          textMonthFontWeight: 'bold',
+          textDayFontSize: 16,
+          textMonthFontSize: 18,
+          textDayHeaderFontSize: 14,
+          arrowColor: '#ffffff'
+        }}
+        markedDates={markedDates}
+        onDayPress={(day: DateData) => {
+          setSelected(day.dateString);
+        }}
+        horizontal={true}
+        pagingEnabled={true}
+        pastScrollRange={12}
+        futureScrollRange={12}
+        scrollEnabled={true}
+        showScrollIndicator={false}
+        calendarWidth={Dimensions.get('window').width}
+        current={currentDate}
+      />
+      
+      {selected && !hasEvents && (
+        <View style={styles.noEventsContainer}>
+          <Text style={styles.noEventsText}>No Workouts scheduled!</Text>
+        </View>
+      )}
+
+      <TouchableOpacity 
+        style={styles.scheduleButton}
+        onPress={handleSchedulePress}
+      >
+        <Text style={styles.buttonText}>Schedule New Workout</Text>
+      </TouchableOpacity>
+
+      <ScheduleWorkoutModal
+        isVisible={isModalVisible}
+        onClose={handleModalClose}
+        selectedDate={selected || currentDate}
+      />
     </View>
   );
 }
@@ -12,12 +129,39 @@ export default function SchedulerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center', // center vertically
-    alignItems: 'center',     // center horizontally
-    backgroundColor: '#000',  // black background
+    backgroundColor: '#000',
   },
-  text: {
-    color: '#fff',
-    fontSize: 18,            // font size
+  calendar: {
+    marginBottom: 10,
+    marginTop: 40,
   },
+  noEventsContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: '60%',
+    alignItems: 'center',
+    transform: [{ translateY: -10 }],
+  },
+  noEventsText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  scheduleButton: {
+    position: 'absolute',
+    bottom: 100,
+    left: 20,
+    right: 20,
+    backgroundColor: '#ff9a02',
+    padding: 12.5,
+    borderRadius: 25,
+    alignItems: 'center',
+    marginHorizontal: 16,
+  },
+  buttonText: {
+    color: '#000',
+    fontSize: 16,
+    fontWeight: 'bold',
+  }
 });
