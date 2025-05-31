@@ -101,9 +101,12 @@ export default function Index() {
 
   return (
     <View style={styles.container}>
-        <Text style={styles.logoText}>gymAll</Text>
+      <View style={styles.logoContainer}>
+        <Text style={styles.logoTextGym}>gym</Text>
+        <Text style={styles.logoTextAll}>All</Text>
+      </View>
 
-      <Text style={styles.welcome}>Welcome Back!</Text>
+      <Text style={styles.welcome}>Welcome!</Text>
       <Text style={styles.message}>Login to your account!</Text>
 
       <TextInput
@@ -152,7 +155,7 @@ export default function Index() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F4F7FB",
+    backgroundColor: "#000",
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
@@ -166,8 +169,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "#1D2951",
   },
-  logoText: {
-    color: "#fff",
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  logoTextGym: {
+    color: "#ffffff",
+    fontSize: 36,
+    fontWeight: "bold"
+  },
+  logoTextAll: {
+    color: "#ff9a02",
     fontSize: 36,
     fontWeight: "bold"
   },
@@ -175,26 +188,27 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "600",
     marginBottom: 4,
-    color: "#333",
+    color: "#fff",
   },
   message: {
     fontSize: 14,
-    color: "#777",
+    color: "#ccc",
     marginBottom: 24,
   },
   input: {
     width: "100%",
     height: 48,
-    backgroundColor: "#fff",
+    backgroundColor: "#222",
     borderRadius: 8,
     paddingHorizontal: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#333",
+    color: "#fff",
   },
   loginButton: {
     width: "100%",
-    backgroundColor: "#1D2951",
+    backgroundColor: "#1e90ff",
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: "center",
@@ -206,17 +220,17 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   forgotText: {
-    color: "888",
+    color: "#ccc",
     marginTop: 12,
     fontSize: 13,
   },
   signupText: {
     marginTop: 20,
     fontSize: 14,
-    color: "#888",
+    color: "#ccc",
   },
   signupLink: {
-    color: "1D2951",
+    color: "#1e90ff",
     fontWeight: "bold",
   },
   disabledButton: {

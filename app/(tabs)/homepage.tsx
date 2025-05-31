@@ -42,7 +42,10 @@ export default function HomepageScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        <ThemedText style={styles.headerText}>gymAll</ThemedText>
+        <View style={styles.logoContainer}>
+          <ThemedText style={styles.headerTextGym}>gym</ThemedText>
+          <ThemedText style={styles.headerTextAll}>All</ThemedText>
+        </View>
       </View>
       <View style={styles.container}>
         <ThemedText style={styles.text}>Homepage to be done.</ThemedText>
@@ -74,10 +77,19 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#222",
   },
-  headerText: {
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerTextGym: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#fff",
+    color: "#ffffff",
+  },
+  headerTextAll: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#ff9a02",
   },
   container: {
     flex: 1,
