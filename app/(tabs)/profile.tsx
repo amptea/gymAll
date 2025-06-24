@@ -1,5 +1,5 @@
 import { ThemedText } from "@/components/ThemedText";
-import {View, StyleSheet } from 'react-native';
+import { StyleSheet, View } from "react-native";
 
 export default function AboutScreen() {
   return (
@@ -12,12 +12,12 @@ export default function AboutScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center', // center vertically
-    alignItems: 'center',     // center horizontally
-    backgroundColor: '#000',  // black background
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#000",
   },
   text: {
-    color: '#fff',
-    fontSize: 18,            // font size
+    color: "#fff",
+    fontSize: 18,
   },
 });

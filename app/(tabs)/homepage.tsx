@@ -4,10 +4,10 @@ import { AuthError, signOut } from "firebase/auth";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  SafeAreaView,
   StyleSheet,
   TouchableOpacity,
   View,
-  SafeAreaView,
 } from "react-native";
 import { auth } from "../../FirebaseConfig";
 
@@ -15,14 +15,12 @@ export default function HomepageScreen() {
   const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
-    // Set up auth state listener
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (!user) {
         router.replace("/");
       }
     });
 
-    // Clean up the listener on unmount
     return unsubscribe;
   }, []);
 
@@ -78,8 +76,8 @@ const styles = StyleSheet.create({
     borderBottomColor: "#222",
   },
   logoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   headerTextGym: {
     fontSize: 24,
@@ -109,7 +107,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   signOutText: {
-    color: "#ff4d4d", // red color for sign out
+    color: "#ff4d4d",
     fontSize: 16,
   },
 });

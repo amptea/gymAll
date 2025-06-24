@@ -30,11 +30,9 @@ export default function Index() {
         // If there's a user, navigate to the homepage
         router.replace("/(tabs)/homepage");
       }
-      // Mark initialization as complete
       setInitializing(false);
     });
 
-    // Clean up the auth listener on unmount
     return unsubscribe;
   }, []);
 
@@ -52,7 +50,6 @@ export default function Index() {
         password
       );
       console.log("User signed in:", userCredential.user.uid);
-      // Navigation will be handled by the auth state listener
     } catch (error) {
       const authError = error as AuthError;
       const errorMessage = authError.message || "Sign in failed";
@@ -79,7 +76,6 @@ export default function Index() {
       const userCredential: UserCredential =
         await createUserWithEmailAndPassword(auth, email, password);
       console.log("User created:", userCredential.user.uid);
-      // Navigation will be handled by the auth state listener
     } catch (error) {
       const authError = error as AuthError;
       const errorMessage = authError.message || "Sign up failed";
@@ -143,11 +139,11 @@ export default function Index() {
       <Text style={styles.forgotText}>Forgot Password?</Text>
 
       <Text style={styles.signupText}>
-        Don't have an account?{ " "}
+        Don't have an account?{" "}
         <Text style={styles.signupLink} onPress={handleSignUp}>
           Sign Up
-          </Text>
         </Text>
+      </Text>
     </View>
   );
 }
@@ -170,19 +166,19 @@ const styles = StyleSheet.create({
     backgroundColor: "#1D2951",
   },
   logoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 20,
   },
   logoTextGym: {
     color: "#ffffff",
     fontSize: 36,
-    fontWeight: "bold"
+    fontWeight: "bold",
   },
   logoTextAll: {
     color: "#ff9a02",
     fontSize: 36,
-    fontWeight: "bold"
+    fontWeight: "bold",
   },
   welcome: {
     fontSize: 24,
