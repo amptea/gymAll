@@ -49,6 +49,11 @@ const WorkoutScreen: React.FC = () => {
     null
   );
   const [workoutDetailModal, setWorkoutDetailModal] = useState(false);
+  const [workoutDuration, setWorkoutDuration] = useState("");
+  const [editWorkoutModal, setEditWorkoutModal] = useState(false);
+  const [editingWorkout, setEditingWorkout] = useState<SavedWorkout | null>(null);
+  const [editingExercises, setEditingExercises] = useState<ExerciseEntry[]>([]);
+  const [editingDuration, setEditingDuration] = useState("");
 
   const filteredWorkouts = workoutList.filter((item) =>
     item.toLowerCase().includes(searchText.toLowerCase())
@@ -56,6 +61,7 @@ const WorkoutScreen: React.FC = () => {
 
   const cancelWorkout = () => {
     setAddedExercises([]);
+    setWorkoutDuration("");
     setWorkoutStartedPage(false);
   };
 
@@ -64,10 +70,11 @@ const WorkoutScreen: React.FC = () => {
       const newWorkout: SavedWorkout = {
         exercises: addedExercises,
         date: new Date(),
-        duration: 30, // To be changed...
+        duration: workoutDuration ? parseInt(workoutDuration) : undefined,
       };
       setSavedWorkouts((previous) => [newWorkout, ...previous]);
       setAddedExercises([]);
+      setWorkoutDuration("");
       setWorkoutStartedPage(false);
     }
   };
@@ -109,6 +116,55 @@ const WorkoutScreen: React.FC = () => {
   const openWorkoutDetail = (workout: SavedWorkout) => {
     setSelectedWorkout(workout);
     setWorkoutDetailModal(true);
+  };
+
+  const startEditWorkout = (workout: SavedWorkout) => {
+    setEditingWorkout(workout);
+    setEditingExercises([...workout.exercises]);
+    setEditingDuration(workout.duration ? workout.duration.toString() : "");
+    setEditWorkoutModal(true);
+    setWorkoutDetailModal(false);
+  };
+
+  const saveEditedWorkout = () => {
+    if (editingWorkout && editingExercises.length > 0) {
+      const updatedWorkout: SavedWorkout = {
+        ...editingWorkout,
+        exercises: editingExercises,
+        duration: editingDuration ? parseInt(editingDuration) : undefined,
+      };
+
+      setSavedWorkouts((previous) =>
+        previous.map((workout) =>
+          workout === editingWorkout ? updatedWorkout : workout
+        )
+      );
+
+      setEditingWorkout(null);
+      setEditingExercises([]);
+      setEditingDuration("");
+      setEditWorkoutModal(false);
+    }
+  };
+
+  const cancelEditWorkout = () => {
+    setEditingWorkout(null);
+    setEditingExercises([]);
+    setEditingDuration("");
+    setEditWorkoutModal(false);
+  };
+
+  const removeExerciseFromEdit = (exerciseIndex: number) => {
+    setEditingExercises((previous) =>
+      previous.filter((_, index) => index !== exerciseIndex)
+    );
+  };
+
+  const addExerciseToEdit = (exerciseName: string) => {
+    setEditingExercises((previous) => [
+      ...previous,
+      { name: exerciseName, sets: [{ weight: "", reps: "" }] },
+    ]);
   };
 
   return (
@@ -248,12 +304,20 @@ const WorkoutScreen: React.FC = () => {
                   {selectedWorkout ? formatTime(selectedWorkout.date) : ""}
                 </Text>
               </View>
-              <TouchableOpacity
-                onPress={() => setWorkoutDetailModal(false)}
-                style={styles.closeDetailButton}
-              >
-                <Ionicons name="close" size={24} color="white" />
-              </TouchableOpacity>
+              <View style={styles.workoutDetailActions}>
+                <TouchableOpacity
+                  onPress={() => selectedWorkout && startEditWorkout(selectedWorkout)}
+                  style={styles.editWorkoutButton}
+                >
+                  <Ionicons name="create-outline" size={20} color="white" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setWorkoutDetailModal(false)}
+                  style={styles.closeDetailButton}
+                >
+                  <Ionicons name="close" size={24} color="white" />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <ScrollView style={styles.workoutDetailScroll}>
@@ -315,6 +379,19 @@ const WorkoutScreen: React.FC = () => {
                 showsVerticalScrollIndicator={false}
               >
                 <Text style={styles.exercisesAddedText}>Added Exercises:</Text>
+                
+                <View style={styles.durationInputContainer}>
+                  <Text style={styles.durationLabel}>Workout Duration (minutes):</Text>
+                  <TextInput
+                    placeholder="Enter duration"
+                    placeholderTextColor="rgba(170,170,170,1)"
+                    value={workoutDuration}
+                    onChangeText={setWorkoutDuration}
+                    style={styles.durationInput}
+                    keyboardType="numeric"
+                  />
+                </View>
+
                 {addedExercises.length === 0 ? (
                   <Text style={styles.noExercisesText}>
                     No exercises added.
@@ -422,6 +499,182 @@ const WorkoutScreen: React.FC = () => {
                         ...previous,
                         { name: item, sets: [{ weight: "", reps: "" }] },
                       ]);
+                      setAddExercisePage(false);
+                      setSearchText("");
+                    }}
+                  >
+                    <Text style={styles.workoutItemText}>{item}</Text>
+                  </Pressable>
+                )}
+                ListEmptyComponent={
+                  <Text style={styles.emptyWorkoutText}>No workouts found</Text>
+                }
+              />
+
+              <TouchableOpacity
+                onPress={() => {
+                  setAddExercisePage(false);
+                  setSearchText("");
+                }}
+                style={styles.closeButton}
+              >
+                <Text style={styles.workoutButtonText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      </Modal>
+
+      <Modal
+        visible={editWorkoutModal}
+        animationType="slide"
+        transparent={true}
+      >
+        <View style={styles.editWorkoutOverlay}>
+          <View style={styles.editWorkoutContent}>
+            <View style={styles.editWorkoutHeader}>
+              <View>
+                <Text style={styles.editWorkoutTitle}>Edit Workout</Text>
+                <Text style={styles.editWorkoutSubtitle}>
+                  {editingWorkout ? formatDate(editingWorkout.date) : ""}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={cancelEditWorkout}
+                style={styles.closeDetailButton}
+              >
+                <Ionicons name="close" size={24} color="white" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.editWorkoutScroll} showsVerticalScrollIndicator={false}>
+              <View style={styles.durationInputContainer}>
+                <Text style={styles.durationLabel}>Workout Duration (minutes):</Text>
+                <TextInput
+                  placeholder="Enter duration"
+                  placeholderTextColor="rgba(170,170,170,1)"
+                  value={editingDuration}
+                  onChangeText={setEditingDuration}
+                  style={styles.durationInput}
+                  keyboardType="numeric"
+                />
+              </View>
+
+              <Text style={styles.exercisesAddedText}>Exercises:</Text>
+              
+              {editingExercises.map((exercise, exerciseIndex) => (
+                <View key={exerciseIndex} style={styles.editExerciseCard}>
+                  <View style={styles.editExerciseHeader}>
+                    <Text style={styles.exercisesAddedText}>
+                      {exercise.name}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => removeExerciseFromEdit(exerciseIndex)}
+                      style={styles.removeExerciseButton}
+                    >
+                      <Ionicons name="trash-outline" size={20} color="#ff4c4c" />
+                    </TouchableOpacity>
+                  </View>
+                  
+                  {exercise.sets.map((set, setIndex) => (
+                    <View
+                      key={setIndex}
+                      style={styles.editSetRow}
+                    >
+                      <Text style={styles.setNumberText}>Set {setIndex + 1}</Text>
+                      <TextInput
+                        placeholder="Weight"
+                        placeholderTextColor="rgba(170,170,170,1)"
+                        value={set.weight}
+                        onChangeText={(text) => {
+                          const updated = [...editingExercises];
+                          updated[exerciseIndex].sets[setIndex].weight = text;
+                          setEditingExercises(updated);
+                        }}
+                        style={styles.editSetInput}
+                        keyboardType="numeric"
+                      />
+                      <TextInput
+                        placeholder="Reps"
+                        placeholderTextColor="rgba(170,170,170,1)"
+                        value={set.reps}
+                        onChangeText={(text) => {
+                          const updated = [...editingExercises];
+                          updated[exerciseIndex].sets[setIndex].reps = text;
+                          setEditingExercises(updated);
+                        }}
+                        style={styles.editSetInput}
+                        keyboardType="numeric"
+                      />
+                    </View>
+                  ))}
+                  
+                  <TouchableOpacity
+                    onPress={() => {
+                      const updated = [...editingExercises];
+                      updated[exerciseIndex].sets.push({
+                        weight: "",
+                        reps: "",
+                      });
+                      setEditingExercises(updated);
+                    }}
+                    style={styles.addSetButton}
+                  >
+                    <Text style={styles.addSetText}>+ Add Set</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+
+              <TouchableOpacity
+                style={styles.addExerciseToEditButton}
+                onPress={() => setAddExercisePage(true)}
+              >
+                <Text style={styles.workoutButtonText}>+ Add Exercise</Text>
+              </TouchableOpacity>
+            </ScrollView>
+
+            <View style={styles.editWorkoutFooter}>
+              <TouchableOpacity
+                style={styles.saveWorkoutButton}
+                onPress={saveEditedWorkout}
+              >
+                <Text style={styles.workoutButtonText}>Save Changes</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.finishEditWorkoutButton}
+                onPress={() => {
+                  saveEditedWorkout();
+                  setEditWorkoutModal(false);
+                }}
+              >
+                <Text style={styles.workoutButtonText}>Finish</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        <Modal
+          visible={addExercisePage}
+          animationType="slide"
+          transparent={true}
+        >
+          <View style={styles.addExerciseOverlay}>
+            <View style={styles.addExerciseContent}>
+              <TextInput
+                placeholder="Search workouts..."
+                style={styles.searchInput}
+                value={searchText}
+                onChangeText={setSearchText}
+              />
+
+              <FlatList
+                data={filteredWorkouts}
+                keyExtractor={(item) => item}
+                renderItem={({ item }) => (
+                  <Pressable
+                    style={styles.workoutItem}
+                    onPress={() => {
+                      addExerciseToEdit(item);
                       setAddExercisePage(false);
                       setSearchText("");
                     }}
@@ -598,6 +851,13 @@ const styles = StyleSheet.create({
     color: "rgba(255, 255, 255, 0.6)",
     fontSize: 16,
     marginTop: 4,
+  },
+  workoutDetailActions: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  editWorkoutButton: {
+    padding: 8,
   },
   closeDetailButton: {
     padding: 8,
@@ -783,6 +1043,122 @@ const styles = StyleSheet.create({
     color: "#888",
     textAlign: "center",
     marginTop: 20,
+  },
+  durationInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  durationLabel: {
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 14,
+    marginRight: 10,
+  },
+  durationInput: {
+    flex: 1,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    color: "#fff",
+    padding: 10,
+    borderRadius: 8,
+  },
+  editWorkoutOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.9)",
+    paddingTop: 50,
+  },
+  editWorkoutContent: {
+    flex: 1,
+    backgroundColor: "rgb(0, 0, 0)",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+  },
+  editWorkoutHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 24,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255, 255, 255, 0.1)",
+  },
+  editWorkoutTitle: {
+    color: "rgba(255,255,255,1)",
+    fontSize: 24,
+    fontWeight: "bold",
+  },
+  editWorkoutSubtitle: {
+    color: "rgba(255, 255, 255, 0.6)",
+    fontSize: 16,
+    marginTop: 4,
+  },
+  editWorkoutScroll: {
+    flex: 1,
+  },
+  editExerciseCard: {
+    backgroundColor: "rgba(30, 30, 30, 0.6)",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  editExerciseHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  removeExerciseButton: {
+    padding: 8,
+  },
+  editSetRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  setNumberText: {
+    color: "rgba(255, 255, 255, 0.6)",
+    fontSize: 14,
+    minWidth: 50,
+  },
+  editSetInput: {
+    flex: 1,
+    marginRight: 10,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    color: "#fff",
+    padding: 10,
+    borderRadius: 8,
+  },
+  addSetButton: {
+    padding: 8,
+  },
+  editWorkoutFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.1)",
+    gap: 12,
+  },
+  saveWorkoutButton: {
+    flex: 1,
+    backgroundColor: "rgba(255, 154, 2, 1)",
+    padding: 12.5,
+    borderRadius: 25,
+    alignItems: "center",
+  },
+  finishEditWorkoutButton: {
+    flex: 1,
+    backgroundColor: "rgb(46, 124, 226)",
+    padding: 12.5,
+    borderRadius: 25,
+    alignItems: "center",
+  },
+  addExerciseToEditButton: {
+    backgroundColor: "rgba(255, 154, 2, 1)",
+    padding: 12.5,
+    borderRadius: 25,
+    alignItems: "center",
+    marginTop: 16,
   },
 });
 
