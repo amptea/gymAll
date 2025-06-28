@@ -1,92 +1,26 @@
-import { router } from "expo-router";
-import {
-  AuthError,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  UserCredential,
-} from "firebase/auth";
-import React, { useEffect, useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useState } from "react";
+import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+
 import {
   ActivityIndicator,
-  Alert,
+  Modal,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
-import { auth } from "../FirebaseConfig";
 
 export default function Index() {
   const [email, setEmail] = useState<string>("");
+  const [name, setName] = useState<string>("");
   const [password, setPassword] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(false);
-  const [initializing, setInitializing] = useState<boolean>(true);
+  const [username, setUsername] = useState<string>("");
+  const [signupPage, setSignupPage] = useState<boolean>(false);
+  const { initializing, handleSignIn, handleSignUp } = useAuth();
 
-  useEffect(() => {
-    // Check if the user is already logged in when the component mounts
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user) {
-        // If there's a user, navigate to the homepage
-        router.replace("/(tabs)/homepage");
-      }
-      setInitializing(false);
-    });
-
-    return unsubscribe;
-  }, []);
-
-  const handleSignIn = async (): Promise<void> => {
-    if (!email || !password) {
-      Alert.alert("Error", "Please enter both email and password");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const userCredential: UserCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-      console.log("User signed in:", userCredential.user.uid);
-    } catch (error) {
-      const authError = error as AuthError;
-      const errorMessage = authError.message || "Sign in failed";
-      console.log(authError);
-      Alert.alert("Sign in failed", errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSignUp = async (): Promise<void> => {
-    if (!email || !password) {
-      Alert.alert("Error", "Please enter both email and password");
-      return;
-    }
-
-    if (password.length < 6) {
-      Alert.alert("Error", "Password should be at least 6 characters");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const userCredential: UserCredential =
-        await createUserWithEmailAndPassword(auth, email, password);
-      console.log("User created:", userCredential.user.uid);
-    } catch (error) {
-      const authError = error as AuthError;
-      const errorMessage = authError.message || "Sign up failed";
-      console.log(authError);
-      Alert.alert("Sign up failed", errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Show a loading spinner while checking authentication state
   if (initializing) {
     return (
       <View style={[styles.container]}>
@@ -102,8 +36,8 @@ export default function Index() {
         <Text style={styles.logoTextAll}>All</Text>
       </View>
 
-      <Text style={styles.welcome}>Welcome!</Text>
-      <Text style={styles.message}>Login to your account!</Text>
+      <Text style={styles.welcomeText}>Welcome!</Text>
+      <Text style={styles.messageText}>Login to your account!</Text>
 
       <TextInput
         style={styles.input}
@@ -113,7 +47,6 @@ export default function Index() {
         onChangeText={setEmail}
         keyboardType="email-address"
         autoCapitalize="none"
-        editable={!loading}
       />
       <TextInput
         style={styles.input}
@@ -122,28 +55,83 @@ export default function Index() {
         value={password}
         onChangeText={setPassword}
         secureTextEntry
-        editable={!loading}
       />
 
       <TouchableOpacity
-        style={[styles.loginButton, loading && styles.disabledButton]}
-        onPress={handleSignIn}
-        disabled={loading}
+        style={[styles.loginButton && styles.disabledButton]}
+        onPress={() => handleSignIn(email, password)}
       >
-        {loading ? (
-          <ActivityIndicator size="small" color="#fff" />
-        ) : (
-          <Text style={styles.loginText}>Login</Text>
-        )}
+      <Text style={styles.loginText}>Login</Text>
       </TouchableOpacity>
       <Text style={styles.forgotText}>Forgot Password?</Text>
 
       <Text style={styles.signupText}>
         Don't have an account?{" "}
-        <Text style={styles.signupLink} onPress={handleSignUp}>
+        <Text style={styles.signupLink} onPress={() => setSignupPage(true)}>
           Sign Up
         </Text>
       </Text>
+
+      <Modal visible={signupPage} animationType="slide" transparent={false}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <ScrollView
+            contentContainerStyle={styles.signupContainer}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.signupHeader}>
+              <TouchableOpacity onPress={() => setSignupPage(false)} style={{ marginRight: 12 }}>
+                <Ionicons name="chevron-back" style={{ paddingBottom: 12 }} size={28} color="rgba(255, 255, 255, 1)" />
+              </TouchableOpacity>
+              <View style={styles.logoContainer}>
+                <Text style={styles.logoTextGym}>gym</Text>
+                <Text style={styles.logoTextAll}>All</Text>
+              </View>
+              <View style={{ width: 28, marginLeft: 12 }} />
+            </View>
+            <Text style={styles.createAccountText}>Create your account</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Username"
+              placeholderTextColor="rgba(170,170,170,1)"
+              value={username}
+              onChangeText={setUsername}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Name"
+              placeholderTextColor="rgba(170,170,170,1)"
+              value={name}
+              onChangeText={setName}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              placeholderTextColor="rgba(170,170,170,1)"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor="rgba(170,170,170,1)"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+            />
+            <TouchableOpacity
+              style={[styles.loginButton && styles.disabledButton]}
+              onPress={() => handleSignUp(email, password, username, name)}
+            >
+            <Text style={styles.loginText}>Sign Up</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -151,19 +139,10 @@ export default function Index() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#000",
+    backgroundColor: "rgba(0,0,0,0.8)",
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
-  },
-  logoIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    marginBottom: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#1D2951",
   },
   logoContainer: {
     flexDirection: "row",
@@ -171,52 +150,52 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   logoTextGym: {
-    color: "#ffffff",
+    color: "rgba(255, 255, 255, 1)",
     fontSize: 36,
     fontWeight: "bold",
   },
   logoTextAll: {
-    color: "#ff9a02",
+    color: "rgba(255, 154, 2, 1)",
     fontSize: 36,
     fontWeight: "bold",
   },
-  welcome: {
+  welcomeText: {
     fontSize: 24,
     fontWeight: "600",
     marginBottom: 4,
-    color: "#fff",
+    color: "rgba(255, 255, 255, 1)",
   },
-  message: {
+  messageText: {
     fontSize: 14,
-    color: "#ccc",
+    color: "rgba(204, 204, 204, 1)",
     marginBottom: 24,
   },
   input: {
     width: "100%",
     height: 48,
-    backgroundColor: "#222",
+    backgroundColor: "rgba(34, 34, 34, 1)",
     borderRadius: 8,
     paddingHorizontal: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "#333",
-    color: "#fff",
+    borderColor: "rgba(51, 51, 51, 1)",
+    color: "rgba(255, 255, 255, 1)",
   },
   loginButton: {
     width: "100%",
-    backgroundColor: "#1e90ff",
+    backgroundColor: "rgba(30, 144, 255, 1)",
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: "center",
     marginTop: 8,
   },
   loginText: {
-    color: "#fff",
+    color: "rgba(255, 255, 255, 1)",
     fontSize: 16,
     fontWeight: "bold",
   },
   forgotText: {
-    color: "#ccc",
+    color: "rgba(204, 204, 204, 1)",
     marginTop: 12,
     fontSize: 13,
   },
@@ -228,6 +207,26 @@ const styles = StyleSheet.create({
   signupLink: {
     color: "#1e90ff",
     fontWeight: "bold",
+  },
+  signupContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,1)",
+    justifyContent: "center",
+    padding: 24,
+  },
+  signupHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
+    marginBottom: 20,
+    marginTop: 10,
+  },
+  createAccountText: {
+    color: "rgba(255, 255, 255, 1)",
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 20,
   },
   disabledButton: {
     opacity: 0.6,

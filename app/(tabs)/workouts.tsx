@@ -48,9 +48,9 @@ const WorkoutScreen: React.FC = () => {
   const [selectedWorkout, setSelectedWorkout] = useState<SavedWorkout | null>(
     null
   );
-  const [workoutDetailModal, setWorkoutDetailModal] = useState(false);
+  const [workoutDetailPage, setWorkoutDetailPage] = useState(false);
   const [workoutDuration, setWorkoutDuration] = useState("");
-  const [editWorkoutModal, setEditWorkoutModal] = useState(false);
+  const [editWorkoutPage, setEditWorkoutPage] = useState(false);
   const [editingWorkout, setEditingWorkout] = useState<SavedWorkout | null>(null);
   const [editingExercises, setEditingExercises] = useState<ExerciseEntry[]>([]);
   const [editingDuration, setEditingDuration] = useState("");
@@ -115,15 +115,15 @@ const WorkoutScreen: React.FC = () => {
 
   const openWorkoutDetail = (workout: SavedWorkout) => {
     setSelectedWorkout(workout);
-    setWorkoutDetailModal(true);
+    setWorkoutDetailPage(true);
   };
 
   const startEditWorkout = (workout: SavedWorkout) => {
     setEditingWorkout(workout);
     setEditingExercises([...workout.exercises]);
     setEditingDuration(workout.duration ? workout.duration.toString() : "");
-    setEditWorkoutModal(true);
-    setWorkoutDetailModal(false);
+    setEditWorkoutPage(true);
+    setWorkoutDetailPage(false);
   };
 
   const saveEditedWorkout = () => {
@@ -143,7 +143,7 @@ const WorkoutScreen: React.FC = () => {
       setEditingWorkout(null);
       setEditingExercises([]);
       setEditingDuration("");
-      setEditWorkoutModal(false);
+      setEditWorkoutPage(false);
     }
   };
 
@@ -151,7 +151,7 @@ const WorkoutScreen: React.FC = () => {
     setEditingWorkout(null);
     setEditingExercises([]);
     setEditingDuration("");
-    setEditWorkoutModal(false);
+    setEditWorkoutPage(false);
   };
 
   const removeExerciseFromEdit = (exerciseIndex: number) => {
@@ -289,7 +289,7 @@ const WorkoutScreen: React.FC = () => {
       </View>
 
       <Modal
-        visible={workoutDetailModal}
+        visible={workoutDetailPage}
         animationType="slide"
         transparent={true}
       >
@@ -312,7 +312,7 @@ const WorkoutScreen: React.FC = () => {
                   <Ionicons name="create-outline" size={20} color="white" />
                 </TouchableOpacity>
                 <TouchableOpacity
-                  onPress={() => setWorkoutDetailModal(false)}
+                  onPress={() => setWorkoutDetailPage(false)}
                   style={styles.closeDetailButton}
                 >
                   <Ionicons name="close" size={24} color="white" />
@@ -526,7 +526,7 @@ const WorkoutScreen: React.FC = () => {
       </Modal>
 
       <Modal
-        visible={editWorkoutModal}
+        visible={editWorkoutPage}
         animationType="slide"
         transparent={true}
       >
@@ -644,7 +644,7 @@ const WorkoutScreen: React.FC = () => {
                 style={styles.finishEditWorkoutButton}
                 onPress={() => {
                   saveEditedWorkout();
-                  setEditWorkoutModal(false);
+                  setEditWorkoutPage(false);
                 }}
               >
                 <Text style={styles.workoutButtonText}>Finish</Text>
