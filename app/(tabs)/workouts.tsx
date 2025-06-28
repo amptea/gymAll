@@ -1,6 +1,10 @@
+import { db } from "@/FirebaseConfig";
+import { useAuth } from "@/hooks/useAuth";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
+import { addDoc, collection, deleteDoc, doc, getDocs, updateDoc } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
 import {
+  Alert,
   FlatList,
   Modal,
   Pressable,
@@ -9,7 +13,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -34,12 +38,14 @@ interface ExerciseEntry {
 }
 
 interface SavedWorkout {
+  id?: string;
   exercises: ExerciseEntry[];
   date: Date;
   duration?: number;
 }
 
 const WorkoutScreen: React.FC = () => {
+  const { user } = useAuth();
   const [addExercisePage, setAddExercisePage] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [workoutStartedPage, setWorkoutStartedPage] = useState(false);
@@ -51,9 +57,15 @@ const WorkoutScreen: React.FC = () => {
   const [workoutDetailPage, setWorkoutDetailPage] = useState(false);
   const [workoutDuration, setWorkoutDuration] = useState("");
   const [editWorkoutPage, setEditWorkoutPage] = useState(false);
-  const [editingWorkout, setEditingWorkout] = useState<SavedWorkout | null>(null);
-  const [editingExercises, setEditingExercises] = useState<ExerciseEntry[]>([]);
-  const [editingDuration, setEditingDuration] = useState("");
+  const [currentWorkoutEdited, setCurrentWorkoutEdited] = useState<SavedWorkout | null>(null);
+  const [currentExercisesEdited, setCurrentExercisesEdited] = useState<ExerciseEntry[]>([]);
+  const [currentDurationEdited, setCurrentDurationEdited] = useState("");
+
+  useEffect(() => {
+   if (user) {
+    loadWorkoutsFromFirestore();
+   } 
+  }, [user]);
 
   const filteredWorkouts = workoutList.filter((item) =>
     item.toLowerCase().includes(searchText.toLowerCase())
@@ -65,17 +77,28 @@ const WorkoutScreen: React.FC = () => {
     setWorkoutStartedPage(false);
   };
 
-  const finishWorkout = () => {
-    if (addedExercises.length > 0) {
-      const newWorkout: SavedWorkout = {
-        exercises: addedExercises,
-        date: new Date(),
-        duration: workoutDuration ? parseInt(workoutDuration) : undefined,
-      };
-      setSavedWorkouts((previous) => [newWorkout, ...previous]);
-      setAddedExercises([]);
-      setWorkoutDuration("");
-      setWorkoutStartedPage(false);
+  const finishWorkout = async () => {
+    if (addedExercises.length > 0 && user) {
+      try {        
+        const newWorkout: SavedWorkout = {
+          exercises: addedExercises,
+          date: new Date(),
+          duration: workoutDuration ? parseInt(workoutDuration) : undefined
+        };
+        
+        const workoutId = await saveWorkoutToFirestore(newWorkout);
+        
+        if (workoutId) {
+          const savedWorkout = { ...newWorkout, id: workoutId };
+          setSavedWorkouts((previous) => [savedWorkout, ...previous]);
+        }
+
+        setAddedExercises([]);
+        setWorkoutDuration("");
+        setWorkoutStartedPage(false);
+      } catch (error) {
+        Alert.alert("Error", "Workout not saved successfully");
+      }
     }
   };
 
@@ -119,52 +142,145 @@ const WorkoutScreen: React.FC = () => {
   };
 
   const startEditWorkout = (workout: SavedWorkout) => {
-    setEditingWorkout(workout);
-    setEditingExercises([...workout.exercises]);
-    setEditingDuration(workout.duration ? workout.duration.toString() : "");
+    setCurrentWorkoutEdited(workout);
+    setCurrentExercisesEdited([...workout.exercises]);
+    setCurrentDurationEdited(workout.duration ? workout.duration.toString() : "");
     setEditWorkoutPage(true);
     setWorkoutDetailPage(false);
   };
 
-  const saveEditedWorkout = () => {
-    if (editingWorkout && editingExercises.length > 0) {
-      const updatedWorkout: SavedWorkout = {
-        ...editingWorkout,
-        exercises: editingExercises,
-        duration: editingDuration ? parseInt(editingDuration) : undefined,
-      };
-
-      setSavedWorkouts((previous) =>
-        previous.map((workout) =>
-          workout === editingWorkout ? updatedWorkout : workout
-        )
-      );
-
-      setEditingWorkout(null);
-      setEditingExercises([]);
-      setEditingDuration("");
-      setEditWorkoutPage(false);
+  const saveEditedWorkout = async () => {
+    if (currentWorkoutEdited && currentExercisesEdited.length > 0) {
+      try {
+        const updatedWorkout: SavedWorkout = {
+          ...currentWorkoutEdited,
+          exercises: currentExercisesEdited,
+          duration: currentDurationEdited ? parseInt(currentDurationEdited) : undefined,
+        };
+        
+        if (currentWorkoutEdited.id) {
+          await updateWorkoutInFirestore(currentWorkoutEdited.id, updatedWorkout);
+        }
+        setSavedWorkouts((previous) =>
+          previous.map((workout) =>
+            workout === currentWorkoutEdited ? updatedWorkout : workout
+          )
+        );
+  
+        setCurrentWorkoutEdited(null);
+        setCurrentExercisesEdited([]);
+        setCurrentDurationEdited("");
+        setEditWorkoutPage(false);
+      } catch (error) {
+        Alert.alert("Error", "Workout not updated successfully");
+      }
     }
   };
 
   const cancelEditWorkout = () => {
-    setEditingWorkout(null);
-    setEditingExercises([]);
-    setEditingDuration("");
+    setCurrentWorkoutEdited(null);
+    setCurrentExercisesEdited([]);
+    setCurrentDurationEdited("");
     setEditWorkoutPage(false);
   };
 
   const removeExerciseFromEdit = (exerciseIndex: number) => {
-    setEditingExercises((previous) =>
+    setCurrentExercisesEdited((previous) =>
       previous.filter((_, index) => index !== exerciseIndex)
     );
   };
 
   const addExerciseToEdit = (exerciseName: string) => {
-    setEditingExercises((previous) => [
+    setCurrentExercisesEdited((previous) => [
       ...previous,
       { name: exerciseName, sets: [{ weight: "", reps: "" }] },
     ]);
+  };
+
+  const deleteWorkout = async (workoutId: string) => {
+    try {
+      await deleteWorkoutFromFirestore(workoutId);
+      setSavedWorkouts((previous) => previous.filter((workout) => workout.id !== workoutId));
+    } catch (error) {
+      Alert.alert("Error", "Failed to delete workout");
+    }
+  }
+
+  const loadWorkoutsFromFirestore = async () => {
+    if (!user) {
+      Alert.alert("Error", "User not found");
+      return;
+    }
+    try {
+      const workoutRef = collection(db, "workouts");
+      const workoutList = await getDocs(workoutRef);
+      const workouts: SavedWorkout[] = [];
+
+      workoutList.forEach((doc) => {
+        const data = doc.data();
+        if (data.userId === user.uid) {
+          workouts.push({
+            id: doc.id,
+            exercises: data.exercises,
+            date: data.date.toDate(),
+            duration: data.duration,
+          });
+        }
+      })
+      setSavedWorkouts(workouts); 
+    } catch (error) {
+      Alert.alert("Error", "Failed to load workouts");
+    }
+  };
+
+  const saveWorkoutToFirestore = async (workout: SavedWorkout) => {
+    if (!user) {
+      Alert.alert("Error", "User not found");
+      return;
+    }
+
+    try {
+      const workoutData = {
+        userId: user.uid,
+        exercises: workout.exercises,
+        date: workout.date,
+        duration: workout.duration,
+      }
+      const workoutsRef = collection(db, "workouts");
+      const workoutsDoc = await addDoc(workoutsRef, workoutData);
+      return workoutsDoc.id;
+    } catch (error) {
+      Alert.alert("Error", "Workout not saved successfully");
+    }
+  };
+
+  const updateWorkoutInFirestore = async (workoutId: string, updatedWorkout: SavedWorkout) => {
+    if (!user) {
+      Alert.alert("Error", "User not found");
+      return;
+    }
+    try {
+      const workoutRef = doc(db, "workouts", workoutId);
+      await updateDoc(workoutRef, {
+        exercises: updatedWorkout.exercises,
+        duration: updatedWorkout.duration,
+      });
+    } catch (error) {
+      Alert.alert("Error", "Workout not updated successfully");
+    }
+  };
+
+  const deleteWorkoutFromFirestore = async (workoutId: string) => {
+    if (!user) {
+      Alert.alert("Error", "User not found");
+      return;
+    }
+    try {
+      const workoutRef = doc(db, "workouts", workoutId);
+      await deleteDoc(workoutRef);
+    } catch (error) {
+      Alert.alert("Error", "Workout not deleted successfully");
+    }
   };
 
   return (
@@ -305,6 +421,22 @@ const WorkoutScreen: React.FC = () => {
                 </Text>
               </View>
               <View style={styles.workoutDetailActions}>
+                <TouchableOpacity 
+                  onPress={() => Alert.alert("Delete Workout", "Are you sure you want to delete this workout?", [
+                    {
+                      text: "Cancel",
+                    },
+                    { text: "Delete", onPress: async () => {
+                      if (selectedWorkout?.id) {
+                        await deleteWorkout(selectedWorkout.id);
+                        setWorkoutDetailPage(false);
+                      }
+                    }},
+                  ])}
+                  style={styles.deleteWorkoutButton}
+                >
+                  <Ionicons name="trash-outline" size={20} color="white" />
+                </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => selectedWorkout && startEditWorkout(selectedWorkout)}
                   style={styles.editWorkoutButton}
@@ -536,7 +668,7 @@ const WorkoutScreen: React.FC = () => {
               <View>
                 <Text style={styles.editWorkoutTitle}>Edit Workout</Text>
                 <Text style={styles.editWorkoutSubtitle}>
-                  {editingWorkout ? formatDate(editingWorkout.date) : ""}
+                  {currentWorkoutEdited ? formatDate(currentWorkoutEdited.date) : ""}
                 </Text>
               </View>
               <TouchableOpacity
@@ -553,8 +685,8 @@ const WorkoutScreen: React.FC = () => {
                 <TextInput
                   placeholder="Enter duration"
                   placeholderTextColor="rgba(170,170,170,1)"
-                  value={editingDuration}
-                  onChangeText={setEditingDuration}
+                  value={currentDurationEdited}
+                  onChangeText={setCurrentDurationEdited}
                   style={styles.durationInput}
                   keyboardType="numeric"
                 />
@@ -562,7 +694,7 @@ const WorkoutScreen: React.FC = () => {
 
               <Text style={styles.exercisesAddedText}>Exercises:</Text>
               
-              {editingExercises.map((exercise, exerciseIndex) => (
+              {currentExercisesEdited.map((exercise, exerciseIndex) => (
                 <View key={exerciseIndex} style={styles.editExerciseCard}>
                   <View style={styles.editExerciseHeader}>
                     <Text style={styles.exercisesAddedText}>
@@ -587,9 +719,9 @@ const WorkoutScreen: React.FC = () => {
                         placeholderTextColor="rgba(170,170,170,1)"
                         value={set.weight}
                         onChangeText={(text) => {
-                          const updated = [...editingExercises];
+                          const updated = [...currentExercisesEdited];
                           updated[exerciseIndex].sets[setIndex].weight = text;
-                          setEditingExercises(updated);
+                          setCurrentExercisesEdited(updated);
                         }}
                         style={styles.editSetInput}
                         keyboardType="numeric"
@@ -599,9 +731,9 @@ const WorkoutScreen: React.FC = () => {
                         placeholderTextColor="rgba(170,170,170,1)"
                         value={set.reps}
                         onChangeText={(text) => {
-                          const updated = [...editingExercises];
+                          const updated = [...currentExercisesEdited];
                           updated[exerciseIndex].sets[setIndex].reps = text;
-                          setEditingExercises(updated);
+                          setCurrentExercisesEdited(updated);
                         }}
                         style={styles.editSetInput}
                         keyboardType="numeric"
@@ -611,12 +743,12 @@ const WorkoutScreen: React.FC = () => {
                   
                   <TouchableOpacity
                     onPress={() => {
-                      const updated = [...editingExercises];
+                      const updated = [...currentExercisesEdited];
                       updated[exerciseIndex].sets.push({
                         weight: "",
                         reps: "",
                       });
-                      setEditingExercises(updated);
+                      setCurrentExercisesEdited(updated);
                     }}
                     style={styles.addSetButton}
                   >
@@ -855,6 +987,10 @@ const styles = StyleSheet.create({
   workoutDetailActions: {
     flexDirection: "row",
     alignItems: "center",
+  },
+  deleteWorkoutButton: {
+    padding: 8,
+    paddingRight: 12,
   },
   editWorkoutButton: {
     padding: 8,

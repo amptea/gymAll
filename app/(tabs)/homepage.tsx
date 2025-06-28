@@ -46,6 +46,12 @@ const HomepageScreen: React.FC = () => {
     getUsername();
   }, []);
 
+  useEffect(() => {
+    if (user) {
+      loadFriendsFromFirestore();
+    }
+  }, [user]);
+
   const searchByUsername = async (username: string) => {
     const usersRef = collection(db, "users");
     const q = query(usersRef, where("username", ">=", username), where("username", "<=", username + "\uf8ff"));
@@ -63,9 +69,28 @@ const HomepageScreen: React.FC = () => {
       });
       setFollowingUsers(prev => new Set(prev).add(friendUserId));
     } catch (error) {
-      Alert.alert("Error", error as string);
+      Alert.alert("Error", "Friend not added successfully");
     }
   };
+
+  const loadFriendsFromFirestore = async () => {
+    if (!user) {
+      Alert.alert("Error", "User not found");
+      return;
+    }   
+    try {
+      const currentUserRef = doc(db, 'users', user.uid);
+      const currentUserDoc = await getDoc(currentUserRef);
+      if (currentUserDoc.exists()) {
+        const currentUserData = currentUserDoc.data();
+        if (currentUserData.friends) {
+          setFollowingUsers(new Set(currentUserData.friends));
+        }
+      }
+    } catch (error) {
+      Alert.alert("Error", "Unable to load users followed");
+    }
+  }
 
   const removeFriend = async (currentUserId: string, friendUserId: string) => {
     try {
@@ -79,7 +104,7 @@ const HomepageScreen: React.FC = () => {
         return newSet;
       });
     } catch (error) {
-      Alert.alert("Error", error as string);
+      Alert.alert("Error", "Unable to remove friend");
     }
   };
 

@@ -58,7 +58,7 @@ export default function Index() {
       />
 
       <TouchableOpacity
-        style={[styles.loginButton && styles.disabledButton]}
+        style={styles.loginButton}
         onPress={() => handleSignIn(email, password)}
       >
       <Text style={styles.loginText}>Login</Text>
@@ -124,7 +124,7 @@ export default function Index() {
               secureTextEntry
             />
             <TouchableOpacity
-              style={[styles.loginButton && styles.disabledButton]}
+              style={styles.loginButton}
               onPress={() => handleSignUp(email, password, username, name)}
             >
             <Text style={styles.loginText}>Sign Up</Text>
@@ -227,8 +227,5 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 20,
-  },
-  disabledButton: {
-    opacity: 0.6,
   },
 });
