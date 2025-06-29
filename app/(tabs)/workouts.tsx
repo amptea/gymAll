@@ -1,5 +1,6 @@
 import { db } from "@/FirebaseConfig";
 import { useAuth } from "@/hooks/useAuth";
+import { ExerciseEntry, SavedWorkout } from "@/types/workout";
 import { Ionicons } from "@expo/vector-icons";
 import { addDoc, collection, deleteDoc, doc, getDocs, updateDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
@@ -18,31 +19,16 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const workoutList = [
-  "Push Ups",
-  "Pull Ups",
-  "Squats",
-  "Lunges",
-  "Plank",
-  "Jumping Jacks",
-  "Burpees",
+  "Incline Hammer Curls",
+  "Wide-grip barbell curl",
+  "EZ-bar spider curl",
+  "Hammer Curls",
+  "Zottman Curl",
+  "Barbell Curl",
+  "Flexor Incline Dumbbell Curls",
+  "Concentration curl",
 ];
 
-interface ExerciseSet {
-  weight: string;
-  reps: string;
-}
-
-interface ExerciseEntry {
-  name: string;
-  sets: ExerciseSet[];
-}
-
-interface SavedWorkout {
-  id?: string;
-  exercises: ExerciseEntry[];
-  date: Date;
-  duration?: number;
-}
 
 const WorkoutScreen: React.FC = () => {
   const { user } = useAuth();
@@ -81,6 +67,7 @@ const WorkoutScreen: React.FC = () => {
     if (addedExercises.length > 0 && user) {
       try {        
         const newWorkout: SavedWorkout = {
+          userId: user.uid,
           exercises: addedExercises,
           date: new Date(),
           duration: workoutDuration ? parseInt(workoutDuration) : undefined
@@ -220,6 +207,7 @@ const WorkoutScreen: React.FC = () => {
         const data = doc.data();
         if (data.userId === user.uid) {
           workouts.push({
+            userId: data.userId,
             id: doc.id,
             exercises: data.exercises,
             date: data.date.toDate(),
@@ -452,7 +440,7 @@ const WorkoutScreen: React.FC = () => {
               </View>
             </View>
 
-            <ScrollView style={styles.workoutDetailScroll}>
+            <ScrollView>
               {selectedWorkout?.exercises.map((exercise, exerciseIndex) => (
                 <View key={exerciseIndex} style={styles.exerciseDetailsCard}>
                   <Text style={styles.exerciseDetailsName}>
@@ -884,6 +872,7 @@ const styles = StyleSheet.create({
   previousWorkoutsSection: {
     marginTop: 24,
     marginBottom: 20,
+    paddingHorizontal: 4,
   },
   workoutCard: {
     backgroundColor: "rgba(30, 30, 30, 0.8)",
@@ -997,9 +986,6 @@ const styles = StyleSheet.create({
   },
   closeDetailButton: {
     padding: 8,
-  },
-  workoutDetailScroll: {
-    flex: 1,
   },
   exerciseDetailsCard: {
     backgroundColor: "rgba(30, 30, 30, 0.6)",

@@ -1,57 +1,56 @@
-import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, Pressable, ScrollView, Platform } from 'react-native';
+import { db } from "@/FirebaseConfig";
+import { useAuth } from "@/hooks/useAuth";
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { addDoc, collection } from "firebase/firestore";
+import { useEffect, useState } from 'react';
+import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface ScheduleWorkoutModalProps {
   isVisible: boolean;
   onClose: () => void;
   selectedDate: string;
+  onWorkoutScheduled?: () => void;
 }
 
-export default function ScheduleWorkoutModal({ isVisible, onClose, selectedDate }: ScheduleWorkoutModalProps) {
-  const [workoutDetails, setWorkoutDetails] = useState({
-    title: '',
-    date: '',
-    startTime: '',
-    duration: '',
-    notes: '',
-  });
+interface Schedule {
+  userId: string,
+  id: string,
+  title: string,
+  date: Date,
+  startTime: number,
+  duration: number,
+  notes: string,
+}
 
-  const [errors, setErrors] = useState({
-    title: '',
-    startTime: '',
-    duration: '',
-  });
+const ScheduleWorkoutModal: React.FC<ScheduleWorkoutModalProps> = 
+({ isVisible, onClose, selectedDate, onWorkoutScheduled }) => {
+  const [scheduleDetails, setScheduleDetails] = useState({
+      title: '',
+      date: selectedDate,
+      startTime: '',
+      duration: '',
+      notes: '',
+    });
 
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [tempDate, setTempDate] = useState<Date | null>(null);
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const [date, setDate] = useState<Date | null>(null);
+    const [schedule, setSchedule] = useState<Schedule[] | null>(null);
+    const [errors, setErrors] = useState({
+      startTime: '',
+      duration: '',
+      title: '',
+    });
+    const { user } = useAuth();
 
-  // Update date when modal opens or whenselected date changes
+  // Update date when modal opens or when selected date changes
   useEffect(() => {
     if (isVisible) {
-      setWorkoutDetails(prev => ({
-        ...prev,
-        date: selectedDate
-      }));
-      
-      setErrors({
+      setScheduleDetails({
         title: '',
-        startTime: '',
-        duration: '',
-      });
-    } else {
-      // Reset form 
-      setWorkoutDetails({
-        title: '',
-        date: '',
+        date: selectedDate,
         startTime: '',
         duration: '',
         notes: '',
-      });
-      setErrors({
-        title: '',
-        startTime: '',
-        duration: '',
       });
     }
   }, [isVisible, selectedDate]);
@@ -65,7 +64,6 @@ export default function ScheduleWorkoutModal({ isVisible, onClose, selectedDate 
     const day = date.getDate();
     const year = date.getFullYear();
     
-    // Add ordinal suffix
     const getOrdinalSuffix = (d: number) => {
       if (d > 3 && d < 21) return 'th';
       switch (d % 10) {
@@ -79,54 +77,10 @@ export default function ScheduleWorkoutModal({ isVisible, onClose, selectedDate 
     return `${dayOfWeek}, ${month} ${day}${getOrdinalSuffix(day)}, ${year}`;
   };
 
-  const validateFields = () => {
-    let isValid = true;
-    const newErrors = {
-      title: '',
-      startTime: '',
-      duration: '',
-    };
-
-    if (!workoutDetails.title.trim()) {
-      newErrors.title = 'Title is required';
-      isValid = false;
-    }
-
-    if (!workoutDetails.startTime.trim()) {
-      newErrors.startTime = 'Start time is required';
-      isValid = false;
-    } else {
-      const timeValue = parseInt(workoutDetails.startTime);
-      const hours = Math.floor(timeValue / 100);
-      const minutes = timeValue % 100;
-      
-      if (isNaN(timeValue) || 
-          workoutDetails.startTime.length !== 4 || 
-          hours < 0 || hours > 23 || 
-          minutes < 0 || minutes > 59) {
-        newErrors.startTime = 'Invalid time format (0000-2359)';
-        isValid = false;
-      }
-    }
-
-    if (!workoutDetails.duration.trim()) {
-      newErrors.duration = 'Duration is required';
-      isValid = false;
-    } else if (isNaN(Number(workoutDetails.duration)) || Number(workoutDetails.duration) <= 0) {
-      newErrors.duration = 'Duration must be a positive number';
-      isValid = false;
-    }
-
-    setErrors(newErrors);
-    return isValid;
-  };
-
   const formatTimeDisplay = (time: string) => {
     if (time.length === 4) {
       const hours = parseInt(time.substring(0, 2));
       const minutes = time.substring(2, 4);
-      
-      // Convert to 12-hour format
       const period = hours >= 12 ? 'PM' : 'AM';
       const displayHours = hours % 12 || 12; 
       
@@ -136,46 +90,91 @@ export default function ScheduleWorkoutModal({ isVisible, onClose, selectedDate 
   };
 
   const handleTimeInput = (text: string) => {
-    // Only allow numbers
     const numericValue = text.replace(/[^0-9]/g, '');
-    
-    // 4 digit limit
     const truncatedValue = numericValue.slice(0, 4);
-    
-    setWorkoutDetails(prev => ({ ...prev, startTime: truncatedValue }));
+    setScheduleDetails(prev => ({ ...prev, startTime: truncatedValue }));
     if (errors.startTime) setErrors(prev => ({ ...prev, startTime: '' }));
   };
 
-  const handleScheduleWorkout = () => {
-    if (validateFields()) {
-      // See how to save to backend in the future, now just console log
-      console.log('Workout scheduled:', workoutDetails);
-      onClose();
+  const handleScheduleWorkout = async () => {
+    const newErrors = { startTime: '', duration: '', title: '' };
+    
+    if (!scheduleDetails.title || scheduleDetails.title.length === 0) {
+      newErrors.title = 'Please enter a title';
+    }
+    
+    if (!scheduleDetails.startTime || scheduleDetails.startTime.length !== 4) {
+      newErrors.startTime = 'Please enter a valid time in 24-hour format (eg. 1300 for 1:00PM)';
+    }
+    
+    if (!scheduleDetails.duration || parseInt(scheduleDetails.duration) <= 0) {
+      newErrors.duration = 'Please enter a valid duration (in minutes)';
+    }
+    
+    if (newErrors.startTime || newErrors.duration || newErrors.title) {
+      setErrors(newErrors);
+      return;
+    }
+    
+    onClose();
+    const newSchedule: Schedule = {
+      userId: user?.uid || '',
+      id: '',
+      title: scheduleDetails.title.trim(),
+      date: new Date(scheduleDetails.date),
+      startTime: parseInt(scheduleDetails.startTime),
+      duration: parseInt(scheduleDetails.duration),
+      notes: scheduleDetails.notes,
+    };
+    const scheduleId = await saveScheduleToFirestore(newSchedule);
+    if (scheduleId) {
+      const savedSchedule = { ...newSchedule, id: scheduleId };
+      setSchedule(prev => [savedSchedule, ...(prev || [])]);
+      
+      if (onWorkoutScheduled) {
+        onWorkoutScheduled();
+      }
     }
   };
 
   const handleDateChange = (event: any, selectedDate: any) => {
     if (selectedDate) {
-      setTempDate(selectedDate);
-    }
+      setDate(selectedDate);
+    } 
   };
 
   const handleConfirmDate = () => {
-    if (tempDate) {
-      setWorkoutDetails(prev => ({
+    if (date) {
+      setScheduleDetails(prev => ({
         ...prev,
-        date: tempDate.toISOString().split('T')[0]
+        date: date.toISOString().split('T')[0]
       }));
     }
     setShowDatePicker(false);
-    setTempDate(null);
+    setDate(null);
   };
 
-  // Maximum date is end of current month
-  const getEndOfMonth = () => {
-    const date = new Date();
-    return new Date(date.getFullYear(), date.getMonth() + 1, 0);
-  };
+  const saveScheduleToFirestore = async (schedule: Schedule) => {
+    if (!user) {
+      Alert.alert("Error", "User not found");
+      return;
+    }
+    try {
+      const scheduleData = {
+        userId: user.uid,
+        title: schedule.title,
+        date: schedule.date,
+        startTime: schedule.startTime,
+        duration: schedule.duration,
+        notes: schedule.notes,
+      }
+      const scheduleRef = collection(db, "schedule");
+      const scheduleDoc = await addDoc(scheduleRef, scheduleData);
+      return scheduleDoc.id;
+    } catch (error) {
+      Alert.alert("Error", "Cannot save schedule successfully");
+    }
+  }
 
   return (
     <Modal
@@ -185,41 +184,43 @@ export default function ScheduleWorkoutModal({ isVisible, onClose, selectedDate 
       onRequestClose={onClose}
     >
       <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={styles.modalView} onPress={e => e.stopPropagation()}>
+        <Pressable style={styles.modalLayout} onPress={e => e.stopPropagation()}>
           <ScrollView>
-            <Text style={styles.header}>Schedule New Workout</Text>
-            
+            <Text style={styles.textHeader}>Schedule New Workout</Text>
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Workout Title<Text style={styles.required}>*</Text></Text>
+              <Text style={styles.subheader}>Workout Title
+                <Text style={styles.requiredFields}>*</Text>
+                </Text>
               <TextInput
-                style={[styles.input, errors.title ? styles.inputError : null]}
+                style={[styles.inputText, errors.title ? styles.inputError : null]}
                 placeholder="Enter workout title"
                 placeholderTextColor="#666"
-                value={workoutDetails.title}
+                value={scheduleDetails.title}
                 onChangeText={(text) => {
-                  setWorkoutDetails(prev => ({ ...prev, title: text }));
+                  setScheduleDetails(prev => ({ ...prev, title: text }));
                   if (errors.title) setErrors(prev => ({ ...prev, title: '' }));
-                }}
-              />
+                }}/>
               {errors.title ? <Text style={styles.errorText}>{errors.title}</Text> : null}
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Date<Text style={styles.required}>*</Text></Text>
+              <Text style={styles.subheader}>Date
+                <Text style={styles.requiredFields}>*</Text>
+                  </Text>
               <TouchableOpacity
                 onPress={() => setShowDatePicker(true)}
                 style={styles.dateButton}
               >
                 <Text style={styles.dateButtonText}>
-                  {formatDate(workoutDetails.date)}
+                  {formatDate(scheduleDetails.date)}
                 </Text>
               </TouchableOpacity>
               {showDatePicker && (
                 <View style={styles.datePickerContainer}>
                   <DateTimePicker
-                    value={tempDate || new Date(workoutDetails.date)}
+                    value={date || new Date(scheduleDetails.date + 'T00:00:00')}
                     mode="date"
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    display={Platform.OS ==='ios' ? 'spinner' : 'default'}
                     onChange={handleDateChange}
                     minimumDate={new Date()}
                     accentColor="#ff9a02"
@@ -236,40 +237,44 @@ export default function ScheduleWorkoutModal({ isVisible, onClose, selectedDate 
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Start Time<Text style={styles.required}>*</Text></Text>
+              <Text style={styles.subheader}>Start Time
+                <Text style={styles.requiredFields}>*</Text>
+                </Text>
               <View style={styles.timeInputContainer}>
                 <TextInput
-                  style={[styles.input, errors.startTime ? styles.inputError : null]}
-                  placeholder="2359"
+                  style={[styles.inputText, errors.startTime ? styles.inputError : null]}
+                  placeholder="2300"
                   placeholderTextColor="#666"
-                  value={workoutDetails.startTime}
+                  value={scheduleDetails.startTime}
                   onChangeText={handleTimeInput}
                   keyboardType="numeric"
                   maxLength={4}
                 />
-                {workoutDetails.startTime.length === 4 && (
+                {scheduleDetails.startTime.length === 4 && (
                   <Text style={styles.timeFormat}>
-                    {formatTimeDisplay(workoutDetails.startTime)}
+                    {formatTimeDisplay(scheduleDetails.startTime)}
                   </Text>
                 )}
               </View>
               {errors.startTime ? (
                 <Text style={styles.errorText}>{errors.startTime}</Text>
               ) : (
-                <Text style={styles.helperText}>Enter time in 24-hour format (1430 for 2:30 PM)</Text>
+                <Text style={styles.helperText}>Enter time in 24-hour format (1300 for 1:00 PM)</Text>
               )}
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Duration (minutes)<Text style={styles.required}>*</Text></Text>
+              <Text style={styles.subheader}>Duration (minutes)
+                <Text style={styles.requiredFields}>*</Text>
+                </Text>
               <TextInput
-                style={[styles.input, errors.duration ? styles.inputError : null]}
+                style={[styles.inputText, errors.duration ? styles.inputError : null]}
                 placeholder="Enter duration"
                 placeholderTextColor="#666"
                 keyboardType="numeric"
-                value={workoutDetails.duration}
+                value={scheduleDetails.duration}
                 onChangeText={(text) => {
-                  setWorkoutDetails(prev => ({ ...prev, duration: text }));
+                  setScheduleDetails(prev => ({ ...prev, duration: text }));
                   if (errors.duration) setErrors(prev => ({ ...prev, duration: '' }));
                 }}
               />
@@ -277,15 +282,15 @@ export default function ScheduleWorkoutModal({ isVisible, onClose, selectedDate 
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Notes</Text>
+              <Text style={styles.subheader}>Notes</Text>
               <TextInput
-                style={[styles.input, styles.textArea]}
+                style={[styles.inputText, styles.textArea]}
                 placeholder="Add workout notes (optional)"
                 placeholderTextColor="#666"
                 multiline
                 numberOfLines={4}
-                value={workoutDetails.notes}
-                onChangeText={(text) => setWorkoutDetails(prev => ({ ...prev, notes: text }))}
+                value={scheduleDetails.notes}
+                onChangeText={(text) => setScheduleDetails(prev => ({ ...prev, notes: text }))}
               />
             </View>
 
@@ -300,7 +305,7 @@ export default function ScheduleWorkoutModal({ isVisible, onClose, selectedDate 
       </Pressable>
     </Modal>
   );
-}
+};
 
 const styles = StyleSheet.create({
   overlay: {
@@ -308,14 +313,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
-  modalView: {
+  modalLayout: {
     backgroundColor: '#000',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
     maxHeight: '90%',
   },
-  header: {
+  textHeader: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#fff',
@@ -325,12 +330,12 @@ const styles = StyleSheet.create({
   inputContainer: {
     marginBottom: 20,
   },
-  label: {
+  subheader: {
     color: '#fff',
     fontSize: 16,
     marginBottom: 8,
   },
-  input: {
+  inputText: {
     backgroundColor: '#333',
     borderRadius: 8,
     padding: 12,
@@ -385,7 +390,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  required: {
+  requiredFields: {
     color: '#ff9a02',
     marginLeft: 4,
   },
@@ -413,3 +418,5 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 }); 
+
+export default ScheduleWorkoutModal;
