@@ -47,7 +47,7 @@ export const useAuth = () => {
         }
     };
 
-    const handleSignUp = async (email: string, password: string, username: string, name: string): Promise<void> => {
+    const handleSignUp = async (email: string, password: string, username: string, name: string, profilePicture?: string | null): Promise<void> => {
         if (!email || !password || !username || !name) {
             Alert.alert("Missing information", "Please fill in all the fields");
             return;
@@ -64,6 +64,7 @@ export const useAuth = () => {
             await setDoc(doc(db, "users", user.uid), {
                 username: username,
                 name: name,
+                profilePicture: profilePicture || null,
             });
 
         } catch (error) {

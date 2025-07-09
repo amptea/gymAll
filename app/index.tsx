@@ -1,7 +1,9 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Ionicons } from "@expo/vector-icons";
+import { MaterialIcons } from "@expo/vector-icons";
 import React, { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, Image, Alert } from "react-native";
+import * as ImagePicker from 'expo-image-picker';
 
 import {
   ActivityIndicator,
@@ -18,8 +20,60 @@ export default function Index() {
   const [name, setName] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [username, setUsername] = useState<string>("");
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [signupPage, setSignupPage] = useState<boolean>(false);
   const { initializing, handleSignIn, handleSignUp } = useAuth();
+
+  const pickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setProfilePicture(result.assets[0].uri);
+      }
+    } catch (error) {
+      Alert.alert("Error", "Failed to pick image");
+    }
+  };
+
+  const takePhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert("Permission needed", "Camera permission is required to take a photo");
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setProfilePicture(result.assets[0].uri);
+      }
+    } catch (error) {
+      Alert.alert("Error", "Failed to take photo");
+    }
+  };
+
+  const showImagePickerOptions = () => {
+    Alert.alert(
+      "Profile Picture",
+      "Choose an option",
+      [
+        { text: "Take Photo", onPress: takePhoto },
+        { text: "Choose from Library", onPress: pickImage },
+        { text: "Cancel", style: "cancel" }
+      ]
+    );
+  };
 
   if (initializing) {
     return (
@@ -92,6 +146,23 @@ export default function Index() {
               <View style={{ width: 28, marginLeft: 12 }} />
             </View>
             <Text style={styles.createAccountText}>Create your account</Text>
+            
+            <View style={styles.profilePictureSection}>
+              <TouchableOpacity style={styles.profilePictureContainer} onPress={showImagePickerOptions}>
+                {profilePicture ? (
+                  <Image source={{ uri: profilePicture }} style={styles.profilePicture} />
+                ) : (
+                  <View style={styles.profilePicturePlaceholder}>
+                    <MaterialIcons name="person" size={32} color="rgba(255, 255, 255, 0.6)" />
+                    <Text style={styles.profilePictureText}>Add Photo</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity onPress={showImagePickerOptions}>
+                <Text style={styles.changePhotoText}>Change Photo</Text>
+              </TouchableOpacity>
+            </View>
+
             <TextInput
               style={styles.input}
               placeholder="Username"
@@ -125,7 +196,7 @@ export default function Index() {
             />
             <TouchableOpacity
               style={styles.loginButton}
-              onPress={() => handleSignUp(email, password, username, name)}
+              onPress={() => handleSignUp(email, password, username, name, profilePicture)}
             >
             <Text style={styles.loginText}>Sign Up</Text>
             </TouchableOpacity>
@@ -227,5 +298,39 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 20,
+  },
+  profilePictureSection: {
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  profilePictureContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: "rgba(34, 34, 34, 1)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+    borderWidth: 2,
+    borderColor: "rgba(51, 51, 51, 1)",
+  },
+  profilePicture: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+  },
+  profilePicturePlaceholder: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  profilePictureText: {
+    color: "rgba(255, 255, 255, 0.6)",
+    fontSize: 12,
+    marginTop: 4,
+  },
+  changePhotoText: {
+    color: "rgba(30, 144, 255, 1)",
+    fontSize: 14,
+    fontWeight: "500",
   },
 });
