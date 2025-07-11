@@ -1,6 +1,7 @@
 import { ThemedText } from "@/components/ThemedText";
 import { StyleSheet, View, SafeAreaView, Image, TouchableOpacity, Text, Modal, TextInput, Alert, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { useAuth } from "@/hooks/useAuth";
+import { useStatistics } from "@/hooks/useStatistics";
 import { useEffect, useState } from "react";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/FirebaseConfig";
@@ -9,9 +10,11 @@ import * as ImagePicker from 'expo-image-picker';
 
 export default function ProfileScreen() {
   const { user } = useAuth();
+  const { statistics, loading, error } = useStatistics();
   const [userData, setUserData] = useState<any>(null);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
-  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editProfileModalVisible, setEditProfileModalVisible] = useState(false);
+  const [statisticsModalVisible, setStatisticsModalVisible] = useState(false);
   const [editName, setEditName] = useState("");
   const [editUsername, setEditUsername] = useState("");
   const [editProfilePicture, setEditProfilePicture] = useState<string | null>(null);
@@ -39,7 +42,7 @@ export default function ProfileScreen() {
   }, [user]);
 
   const handleEditProfile = () => {
-    setEditModalVisible(true);
+    setEditProfileModalVisible(true);
   };
 
   const handleSaveProfile = async () => {
@@ -63,7 +66,7 @@ export default function ProfileScreen() {
       }));
       setProfilePicture(editProfilePicture || null);
 
-      setEditModalVisible(false);
+      setEditProfileModalVisible(false);
       Alert.alert("Success", "Profile updated successfully!");
     } catch (error) {
       Alert.alert("Error", "Failed to update profile");
@@ -121,6 +124,10 @@ export default function ProfileScreen() {
     );
   };
 
+  const handleStatistics = () => {
+    setStatisticsModalVisible(true);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
@@ -145,9 +152,15 @@ export default function ProfileScreen() {
             <Text style={styles.editButtonText}>Edit Profile</Text>
           </TouchableOpacity>
         </View>
+        
+        <View style={styles.statisticsButtonContainer}>
+          <TouchableOpacity style={styles.statisticsButton} onPress={handleStatistics}>
+            <Text style={styles.statisticsButtonText}>Statistics</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <Modal visible={editModalVisible} animationType="slide" transparent={false}>
+      <Modal visible={editProfileModalVisible} animationType="slide" transparent={false}>
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -157,7 +170,7 @@ export default function ProfileScreen() {
             keyboardShouldPersistTaps="handled"
           >
             <View style={styles.editModalHeader}>
-              <TouchableOpacity onPress={() => setEditModalVisible(false)} style={{ marginRight: 12 }}>
+              <TouchableOpacity onPress={() => setEditProfileModalVisible(false)} style={{ marginRight: 12 }}>
                 <MaterialIcons name="close" size={28} color="rgba(255, 255, 255, 1)" />
               </TouchableOpacity>
               <Text style={styles.editModalTitle}>Edit Profile</Text>
@@ -203,6 +216,58 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </ScrollView>
         </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal visible={statisticsModalVisible} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <KeyboardAvoidingView
+              style={{ flex: 1 }}
+              behavior={Platform.OS === "ios" ? "padding" : "height"}
+            >
+              <ScrollView
+                contentContainerStyle={styles.statisticsModalContainer}
+                keyboardShouldPersistTaps="handled"
+              >
+            <View style={styles.statisticsModalHeader}>
+              <TouchableOpacity onPress={() => setStatisticsModalVisible(false)} style={{ marginRight: 12 }}>
+                <MaterialIcons name="close" size={28} color="rgba(255, 255, 255, 1)" />
+              </TouchableOpacity>
+              <Text style={styles.statisticsModalTitle}>Statistics</Text>
+              <View style={{ width: 28, marginLeft: 12 }} />
+            </View>
+
+            <View style={styles.statisticsContent}>
+              {loading ? (
+                <Text style={styles.statisticsText}>Loading statistics...</Text>
+              ) : error ? (
+                <Text style={styles.statisticsText}>Error: {error}</Text>
+              ) : (
+                <>
+                  <View style={styles.statisticCard}>
+                    <Text style={styles.statisticTitle}>Lifetime Weight Lifted</Text>
+                    <Text style={styles.statisticValue}>{statistics.totalWeight} kg</Text>
+                    <Text style={styles.statisticDescription}>Total weight across all workouts</Text>
+                  </View>
+                  
+                  <View style={styles.statisticCard}>
+                    <Text style={styles.statisticTitle}>Total Workouts</Text>
+                    <Text style={styles.statisticValue}>{statistics.totalWorkouts}</Text>
+                    <Text style={styles.statisticDescription}>Workouts completed</Text>
+                  </View>
+                  
+                  <View style={styles.statisticCard}>
+                    <Text style={styles.statisticTitle}>Average Weight</Text>
+                    <Text style={styles.statisticValue}>{statistics.averageWeight} kg</Text>
+                    <Text style={styles.statisticDescription}>Per workout session</Text>
+                  </View>
+                </>
+              )}
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
+    </View>
       </Modal>
     </SafeAreaView>
   );
@@ -349,5 +414,93 @@ const styles = StyleSheet.create({
     color: "rgb(0, 0, 0)",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  statisticsButtonContainer: {
+    alignItems: "center",
+    marginTop: 20,
+  },
+  statisticsButton: {
+    backgroundColor: "rgba(34, 34, 34, 1)",
+    borderRadius: 8,
+    paddingHorizontal: 120,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: "rgba(51, 51, 51, 1)",
+  },
+  statisticsButtonText: {
+    color: "rgba(255, 255, 255, 1)",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  statisticsModalContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,1)",
+    justifyContent: "center",
+    padding: 24,
+  },
+  statisticsModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
+    marginBottom: 20,
+    marginTop: 10,
+  },
+  statisticsModalTitle: {
+    color: "rgba(255, 255, 255, 1)",
+    fontSize: 24,
+    fontWeight: "bold",
+  },
+  statisticsContent: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  statisticsText: {
+    color: "rgba(255, 255, 255, 1)",
+    fontSize: 18,
+    textAlign: "center",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    width: "100%",
+    height: "80%",
+    backgroundColor: "rgba(0, 0, 0, 1)",
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  statisticCard: {
+    backgroundColor: "rgba(34, 34, 34, 1)",
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "rgba(51, 51, 51, 1)",
+    alignItems: "center",
+    width: "100%",
+    height: 100,
+    justifyContent: "flex-start",
+  },
+  statisticTitle: {
+    color: "rgba(255, 255, 255, 1)",
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+  statisticValue: {
+    color: "rgba(255, 154, 2, 1)",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 4,
+  },
+  statisticDescription: {
+    color: "rgba(170, 170, 170, 1)",
+    fontSize: 12,
+    textAlign: "left",
   },
 });
