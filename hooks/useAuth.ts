@@ -13,6 +13,8 @@ import { auth, db } from "../FirebaseConfig";
 export const useAuth = () => {
     const [user, setUser] = useState(auth.currentUser);
     const [initializing, setInitializing] = useState(true);
+    const [emailCache, setEmailCache] = useState('');
+    const [passwordCache, setPasswordCache] = useState('');
 
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -47,24 +49,21 @@ export const useAuth = () => {
         }
     };
 
-    const handleSignUp = async (email: string, password: string, username: string, name: string, profilePicture?: string | null): Promise<void> => {
-        if (!email || !password || !username || !name) {
-            Alert.alert("Missing information", "Please fill in all the fields");
-            return;
-        }
+    const handleEmailPasssword = async (email: string, password: string): Promise<void> => {
+        setEmailCache(email);
+        setPasswordCache(password);
+    }
 
-        if (password.length < 8) {
-            Alert.alert("Invalid Password", "Password should be at least 6 characters");
-            return;
-        }
-
+    const handleSignUp = async (username: string, 
+        name: string, weight: number): Promise<void> => {
         try {
-            const userCredentials = await createUserWithEmailAndPassword(auth, email, password);
+            const userCredentials = await createUserWithEmailAndPassword(auth, emailCache, passwordCache);
             const user = userCredentials.user;
             await setDoc(doc(db, "users", user.uid), {
                 username: username,
                 name: name,
-                profilePicture: profilePicture || null,
+                weight: weight,
+                score: 0,
             });
 
         } catch (error) {
@@ -91,6 +90,7 @@ export const useAuth = () => {
         user,
         initializing,
         handleSignIn,
+        handleEmailPasssword,
         handleSignUp,
         handleSignOut,
     };

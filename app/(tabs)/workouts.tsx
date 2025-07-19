@@ -2,7 +2,15 @@ import { db } from "@/FirebaseConfig";
 import { useAuth } from "@/hooks/useAuth";
 import { ExerciseEntry, SavedWorkout } from "@/types/workout";
 import { Ionicons } from "@expo/vector-icons";
-import { addDoc, collection, deleteDoc, doc, getDocs, updateDoc } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  updateDoc,
+} from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
@@ -14,7 +22,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -29,7 +37,6 @@ const workoutList = [
   "Concentration curl",
 ];
 
-
 const WorkoutScreen: React.FC = () => {
   const { user } = useAuth();
   const [addExercisePage, setAddExercisePage] = useState(false);
@@ -43,14 +50,20 @@ const WorkoutScreen: React.FC = () => {
   const [workoutDetailPage, setWorkoutDetailPage] = useState(false);
   const [workoutDuration, setWorkoutDuration] = useState("");
   const [editWorkoutPage, setEditWorkoutPage] = useState(false);
-  const [currentWorkoutEdited, setCurrentWorkoutEdited] = useState<SavedWorkout | null>(null);
-  const [currentExercisesEdited, setCurrentExercisesEdited] = useState<ExerciseEntry[]>([]);
+  const [currentWorkoutEdited, setCurrentWorkoutEdited] =
+    useState<SavedWorkout | null>(null);
+  const [currentExercisesEdited, setCurrentExercisesEdited] = useState<
+    ExerciseEntry[]
+  >([]);
   const [currentDurationEdited, setCurrentDurationEdited] = useState("");
+  const [weight, setWeight] = useState(0);
+  const [score, setScore] = useState(0);
 
   useEffect(() => {
-   if (user) {
-    loadWorkoutsFromFirestore();
-   } 
+    if (user) {
+      loadWorkoutsFromFirestore();
+      loadUserInfo();
+    }
   }, [user]);
 
   const filteredWorkouts = workoutList.filter((item) =>
@@ -64,17 +77,23 @@ const WorkoutScreen: React.FC = () => {
   };
 
   const finishWorkout = async () => {
+    if (weight === 0) {
+      Alert.alert(
+        "Please update youur weight in the profile page before saving workouts."
+      );
+    }
     if (addedExercises.length > 0 && user) {
-      try {        
+      try {
         const newWorkout: SavedWorkout = {
           userId: user.uid,
           exercises: addedExercises,
           date: new Date(),
-          duration: workoutDuration ? parseInt(workoutDuration) : undefined
+          duration: workoutDuration ? parseInt(workoutDuration) : undefined,
+          workoutScore: 0,
         };
-        
+
         const workoutId = await saveWorkoutToFirestore(newWorkout);
-        
+
         if (workoutId) {
           const savedWorkout = { ...newWorkout, id: workoutId };
           setSavedWorkouts((previous) => [savedWorkout, ...previous]);
@@ -131,7 +150,9 @@ const WorkoutScreen: React.FC = () => {
   const startEditWorkout = (workout: SavedWorkout) => {
     setCurrentWorkoutEdited(workout);
     setCurrentExercisesEdited([...workout.exercises]);
-    setCurrentDurationEdited(workout.duration ? workout.duration.toString() : "");
+    setCurrentDurationEdited(
+      workout.duration ? workout.duration.toString() : ""
+    );
     setEditWorkoutPage(true);
     setWorkoutDetailPage(false);
   };
@@ -142,18 +163,23 @@ const WorkoutScreen: React.FC = () => {
         const updatedWorkout: SavedWorkout = {
           ...currentWorkoutEdited,
           exercises: currentExercisesEdited,
-          duration: currentDurationEdited ? parseInt(currentDurationEdited) : undefined,
+          duration: currentDurationEdited
+            ? parseInt(currentDurationEdited)
+            : undefined,
         };
-        
+
         if (currentWorkoutEdited.id) {
-          await updateWorkoutInFirestore(currentWorkoutEdited.id, updatedWorkout);
+          await updateWorkoutInFirestore(
+            currentWorkoutEdited.id,
+            updatedWorkout
+          );
         }
         setSavedWorkouts((previous) =>
           previous.map((workout) =>
             workout === currentWorkoutEdited ? updatedWorkout : workout
           )
         );
-  
+
         setCurrentWorkoutEdited(null);
         setCurrentExercisesEdited([]);
         setCurrentDurationEdited("");
@@ -180,18 +206,20 @@ const WorkoutScreen: React.FC = () => {
   const addExerciseToEdit = (exerciseName: string) => {
     setCurrentExercisesEdited((previous) => [
       ...previous,
-      { name: exerciseName, sets: [{ weight: "", reps: "" }] },
+      { name: exerciseName, sets: [{ weight: 0, reps: 0 }] },
     ]);
   };
 
   const deleteWorkout = async (workoutId: string) => {
     try {
       await deleteWorkoutFromFirestore(workoutId);
-      setSavedWorkouts((previous) => previous.filter((workout) => workout.id !== workoutId));
+      setSavedWorkouts((previous) =>
+        previous.filter((workout) => workout.id !== workoutId)
+      );
     } catch (error) {
       Alert.alert("Error", "Failed to delete workout");
     }
-  }
+  };
 
   const loadWorkoutsFromFirestore = async () => {
     if (!user) {
@@ -212,10 +240,11 @@ const WorkoutScreen: React.FC = () => {
             exercises: data.exercises,
             date: data.date.toDate(),
             duration: data.duration,
+            workoutScore: data.workoutScore,
           });
         }
-      })
-      setSavedWorkouts(workouts); 
+      });
+      setSavedWorkouts(workouts);
     } catch (error) {
       Alert.alert("Error", "Failed to load workouts");
     }
@@ -228,30 +257,49 @@ const WorkoutScreen: React.FC = () => {
     }
 
     try {
+      const addedScore = calculateScore(workout);
       const workoutData = {
         userId: user.uid,
         exercises: workout.exercises,
         date: workout.date,
         duration: workout.duration,
-      }
+        workoutScore: addedScore,
+      };
       const workoutsRef = collection(db, "workouts");
       const workoutsDoc = await addDoc(workoutsRef, workoutData);
+      setScore(score + addedScore);
+      saveScore(addedScore);
+
       return workoutsDoc.id;
     } catch (error) {
       Alert.alert("Error", "Workout not saved successfully");
     }
   };
 
-  const updateWorkoutInFirestore = async (workoutId: string, updatedWorkout: SavedWorkout) => {
+  const updateWorkoutInFirestore = async (
+    workoutId: string,
+    updatedWorkout: SavedWorkout
+  ) => {
     if (!user) {
       Alert.alert("Error", "User not found");
       return;
     }
     try {
       const workoutRef = doc(db, "workouts", workoutId);
+      const oldWorkoutSnapshot = await getDoc(workoutRef);
+      const oldWorkoutData = oldWorkoutSnapshot.exists()
+        ? oldWorkoutSnapshot.data()
+        : null;
+      const oldWorkoutScore = oldWorkoutData?.workoutScore ?? 0;
+      const newScore = calculateScore(updatedWorkout);
+      const addedScore = newScore - oldWorkoutScore;
+      setScore(score + addedScore);
+      await saveScore(addedScore);
+
       await updateDoc(workoutRef, {
         exercises: updatedWorkout.exercises,
         duration: updatedWorkout.duration,
+        workoutScore: newScore,
       });
     } catch (error) {
       Alert.alert("Error", "Workout not updated successfully");
@@ -265,10 +313,71 @@ const WorkoutScreen: React.FC = () => {
     }
     try {
       const workoutRef = doc(db, "workouts", workoutId);
+      const oldSnapshot = await getDoc(workoutRef);
+      if (oldSnapshot.exists()) {
+        const oldData = oldSnapshot.data();
+        const deletedScore = oldData.workoutScore ?? 0;
+        await saveScore(-deletedScore);
+        setScore(score - deletedScore);
+      }
       await deleteDoc(workoutRef);
     } catch (error) {
       Alert.alert("Error", "Workout not deleted successfully");
     }
+  };
+
+  const loadUserInfo = async () => {
+    if (!user) {
+      Alert.alert("Error", "User not found");
+      return;
+    }
+    try {
+      const userRef = doc(db, "users", user.uid);
+      const userDoc = await getDoc(userRef);
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        setWeight(data.weight);
+        setScore(data.score);
+      }
+    } catch (error) {
+      Alert.alert("Error", "Unable to load weight");
+    }
+  };
+
+  const saveScore = async (addedScore: number) => {
+    if (!user) {
+      Alert.alert("Error", "User not found");
+      return;
+    }
+    try {
+      const userRef = doc(db, "users", user.uid);
+      const userSnapshot = await getDoc(userRef);
+      if (userSnapshot.exists()) {
+        const newScore = score + addedScore;
+        console.log(newScore + "new");
+        console.log(score + "sc");
+        console.log(addedScore + "add");
+        setScore(newScore);
+
+        await updateDoc(userRef, {
+          score: newScore,
+        });
+      }
+    } catch (error) {
+      Alert.alert("Error", "Unable to save score");
+    }
+  };
+
+  const calculateScore = (workout: SavedWorkout) => {
+    if (weight === 0) return 0;
+
+    const exercises = workout.exercises;
+    return exercises.reduce((totalScore, exercise) => {
+      const exerciseScore = exercise.sets.reduce((setScore, set) => {
+        return setScore + (set.weight / weight) * set.reps;
+      }, 0);
+      return totalScore + exerciseScore;
+    }, 0);
   };
 
   return (
@@ -409,24 +518,35 @@ const WorkoutScreen: React.FC = () => {
                 </Text>
               </View>
               <View style={styles.workoutDetailActions}>
-                <TouchableOpacity 
-                  onPress={() => Alert.alert("Delete Workout", "Are you sure you want to delete this workout?", [
-                    {
-                      text: "Cancel",
-                    },
-                    { text: "Delete", onPress: async () => {
-                      if (selectedWorkout?.id) {
-                        await deleteWorkout(selectedWorkout.id);
-                        setWorkoutDetailPage(false);
-                      }
-                    }},
-                  ])}
+                <TouchableOpacity
+                  onPress={() =>
+                    Alert.alert(
+                      "Delete Workout",
+                      "Are you sure you want to delete this workout?",
+                      [
+                        {
+                          text: "Cancel",
+                        },
+                        {
+                          text: "Delete",
+                          onPress: async () => {
+                            if (selectedWorkout?.id) {
+                              await deleteWorkout(selectedWorkout.id);
+                              setWorkoutDetailPage(false);
+                            }
+                          },
+                        },
+                      ]
+                    )
+                  }
                   style={styles.deleteWorkoutButton}
                 >
                   <Ionicons name="trash-outline" size={20} color="white" />
                 </TouchableOpacity>
                 <TouchableOpacity
-                  onPress={() => selectedWorkout && startEditWorkout(selectedWorkout)}
+                  onPress={() =>
+                    selectedWorkout && startEditWorkout(selectedWorkout)
+                  }
                   style={styles.editWorkoutButton}
                 >
                   <Ionicons name="create-outline" size={20} color="white" />
@@ -499,9 +619,11 @@ const WorkoutScreen: React.FC = () => {
                 showsVerticalScrollIndicator={false}
               >
                 <Text style={styles.exercisesAddedText}>Added Exercises:</Text>
-                
+
                 <View style={styles.durationInputContainer}>
-                  <Text style={styles.durationLabel}>Workout Duration (minutes):</Text>
+                  <Text style={styles.durationLabel}>
+                    Workout Duration (minutes):
+                  </Text>
                   <TextInput
                     placeholder="Enter duration"
                     placeholderTextColor="rgba(170,170,170,1)"
@@ -534,11 +656,11 @@ const WorkoutScreen: React.FC = () => {
                           <TextInput
                             placeholder="Weight"
                             placeholderTextColor="rgba(170,170,170,1)"
-                            value={set.weight}
+                            value={set.weight.toString()}
                             onChangeText={(text) => {
                               const updated = [...addedExercises];
                               updated[exerciseIndex].sets[setIndex].weight =
-                                text;
+                                Number(text);
                               setAddedExercises(updated);
                             }}
                             style={styles.setInput}
@@ -547,10 +669,11 @@ const WorkoutScreen: React.FC = () => {
                           <TextInput
                             placeholder="Reps"
                             placeholderTextColor="rgba(170,170,170,1)"
-                            value={set.reps}
+                            value={set.reps.toString()}
                             onChangeText={(text) => {
                               const updated = [...addedExercises];
-                              updated[exerciseIndex].sets[setIndex].reps = text;
+                              updated[exerciseIndex].sets[setIndex].reps =
+                                Number(text);
                               setAddedExercises(updated);
                             }}
                             style={styles.setInput}
@@ -562,8 +685,8 @@ const WorkoutScreen: React.FC = () => {
                         onPress={() => {
                           const updated = [...addedExercises];
                           updated[exerciseIndex].sets.push({
-                            weight: "",
-                            reps: "",
+                            weight: 0,
+                            reps: 0,
                           });
                           setAddedExercises(updated);
                         }}
@@ -617,7 +740,7 @@ const WorkoutScreen: React.FC = () => {
                     onPress={() => {
                       setAddedExercises((previous) => [
                         ...previous,
-                        { name: item, sets: [{ weight: "", reps: "" }] },
+                        { name: item, sets: [{ weight: 0, reps: 0 }] },
                       ]);
                       setAddExercisePage(false);
                       setSearchText("");
@@ -645,18 +768,16 @@ const WorkoutScreen: React.FC = () => {
         </Modal>
       </Modal>
 
-      <Modal
-        visible={editWorkoutPage}
-        animationType="slide"
-        transparent={true}
-      >
+      <Modal visible={editWorkoutPage} animationType="slide" transparent={true}>
         <View style={styles.editWorkoutOverlay}>
           <View style={styles.editWorkoutContent}>
             <View style={styles.editWorkoutHeader}>
               <View>
                 <Text style={styles.editWorkoutTitle}>Edit Workout</Text>
                 <Text style={styles.editWorkoutSubtitle}>
-                  {currentWorkoutEdited ? formatDate(currentWorkoutEdited.date) : ""}
+                  {currentWorkoutEdited
+                    ? formatDate(currentWorkoutEdited.date)
+                    : ""}
                 </Text>
               </View>
               <TouchableOpacity
@@ -667,9 +788,14 @@ const WorkoutScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.editWorkoutScroll} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={styles.editWorkoutScroll}
+              showsVerticalScrollIndicator={false}
+            >
               <View style={styles.durationInputContainer}>
-                <Text style={styles.durationLabel}>Workout Duration (minutes):</Text>
+                <Text style={styles.durationLabel}>
+                  Workout Duration (minutes):
+                </Text>
                 <TextInput
                   placeholder="Enter duration"
                   placeholderTextColor="rgba(170,170,170,1)"
@@ -681,7 +807,7 @@ const WorkoutScreen: React.FC = () => {
               </View>
 
               <Text style={styles.exercisesAddedText}>Exercises:</Text>
-              
+
               {currentExercisesEdited.map((exercise, exerciseIndex) => (
                 <View key={exerciseIndex} style={styles.editExerciseCard}>
                   <View style={styles.editExerciseHeader}>
@@ -692,23 +818,27 @@ const WorkoutScreen: React.FC = () => {
                       onPress={() => removeExerciseFromEdit(exerciseIndex)}
                       style={styles.removeExerciseButton}
                     >
-                      <Ionicons name="trash-outline" size={20} color="#ff4c4c" />
+                      <Ionicons
+                        name="trash-outline"
+                        size={20}
+                        color="#ff4c4c"
+                      />
                     </TouchableOpacity>
                   </View>
-                  
+
                   {exercise.sets.map((set, setIndex) => (
-                    <View
-                      key={setIndex}
-                      style={styles.editSetRow}
-                    >
-                      <Text style={styles.setNumberText}>Set {setIndex + 1}</Text>
+                    <View key={setIndex} style={styles.editSetRow}>
+                      <Text style={styles.setNumberText}>
+                        Set {setIndex + 1}
+                      </Text>
                       <TextInput
                         placeholder="Weight"
                         placeholderTextColor="rgba(170,170,170,1)"
-                        value={set.weight}
+                        value={set.weight.toString()}
                         onChangeText={(text) => {
                           const updated = [...currentExercisesEdited];
-                          updated[exerciseIndex].sets[setIndex].weight = text;
+                          updated[exerciseIndex].sets[setIndex].weight =
+                            Number(text);
                           setCurrentExercisesEdited(updated);
                         }}
                         style={styles.editSetInput}
@@ -717,10 +847,11 @@ const WorkoutScreen: React.FC = () => {
                       <TextInput
                         placeholder="Reps"
                         placeholderTextColor="rgba(170,170,170,1)"
-                        value={set.reps}
+                        value={set.reps.toString()}
                         onChangeText={(text) => {
                           const updated = [...currentExercisesEdited];
-                          updated[exerciseIndex].sets[setIndex].reps = text;
+                          updated[exerciseIndex].sets[setIndex].reps =
+                            Number(text);
                           setCurrentExercisesEdited(updated);
                         }}
                         style={styles.editSetInput}
@@ -728,13 +859,13 @@ const WorkoutScreen: React.FC = () => {
                       />
                     </View>
                   ))}
-                  
+
                   <TouchableOpacity
                     onPress={() => {
                       const updated = [...currentExercisesEdited];
                       updated[exerciseIndex].sets.push({
-                        weight: "",
-                        reps: "",
+                        weight: 0,
+                        reps: 0,
                       });
                       setCurrentExercisesEdited(updated);
                     }}

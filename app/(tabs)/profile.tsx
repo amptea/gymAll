@@ -1,12 +1,24 @@
-import { ThemedText } from "@/components/ThemedText";
-import { StyleSheet, View, SafeAreaView, Image, TouchableOpacity, Text, Modal, TextInput, Alert, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { db } from "@/FirebaseConfig";
 import { useAuth } from "@/hooks/useAuth";
 import { useStatistics } from "@/hooks/useStatistics";
-import { useEffect, useState } from "react";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { db } from "@/FirebaseConfig";
 import { MaterialIcons } from "@expo/vector-icons";
-import * as ImagePicker from 'expo-image-picker';
+import * as ImagePicker from "expo-image-picker";
+import { doc, onSnapshot, updateDoc } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
+import {
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 export default function ProfileScreen() {
   const { user } = useAuth();
@@ -15,30 +27,28 @@ export default function ProfileScreen() {
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [editProfileModalVisible, setEditProfileModalVisible] = useState(false);
   const [statisticsModalVisible, setStatisticsModalVisible] = useState(false);
-  const [editName, setEditName] = useState("");
-  const [editUsername, setEditUsername] = useState("");
-  const [editProfilePicture, setEditProfilePicture] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
+  const [score, setScore] = useState(0);
+  const [weight, setWeight] = useState(0);
+  const [leaderboardModalVisible, setLeaderboardModalVisible] = useState(false);
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      if (user) {
-        try {
-          const userDoc = await getDoc(doc(db, "users", user.uid));
-          if (userDoc.exists()) {
-            const data = userDoc.data();
-            setUserData(data);
-            setProfilePicture(data.profilePicture || null);
-            setEditName(data.name || "");
-            setEditUsername(data.username || "");
-            setEditProfilePicture(data.profilePicture || null);
-          }
-        } catch (error) {
-          console.error("Error fetching user data:", error);
-        }
-      }
-    };
+    if (!user) return;
 
-    fetchUserData();
+    const userRef = doc(db, "users", user.uid);
+    const fetchUserData = onSnapshot(userRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        setUserData(data);
+        setProfilePicture(data.profilePicture || null);
+        setName(data.name || "");
+        setUsername(data.username || "");
+        setWeight(data.weight || 0);
+        setScore(data.score || 0);
+      }
+    });
+    return () => fetchUserData();
   }, [user]);
 
   const handleEditProfile = () => {
@@ -46,25 +56,28 @@ export default function ProfileScreen() {
   };
 
   const handleSaveProfile = async () => {
-    if (!editName || !editUsername) {
+    if (!name || !username || !weight) {
       Alert.alert("Missing information", "Please fill in all the fields");
       return;
     }
 
     try {
       await updateDoc(doc(db, "users", user!.uid), {
-        name: editName,
-        username: editUsername,
-        profilePicture: editProfilePicture || null,
+        name: name,
+        username: username,
+        profilePicture: profilePicture || null,
+        weight: weight,
       });
 
       setUserData((prev: any) => ({
         ...prev,
-        name: editName,
-        username: editUsername,
-        profilePicture: editProfilePicture || null,
+        name: name,
+        username: username,
+        profilePicture: profilePicture || null,
+        weight: weight,
       }));
-      setProfilePicture(editProfilePicture || null);
+      setProfilePicture(profilePicture || null);
+      setWeight(weight);
 
       setEditProfileModalVisible(false);
       Alert.alert("Success", "Profile updated successfully!");
@@ -76,14 +89,14 @@ export default function ProfileScreen() {
   const pickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
+        mediaTypes: ["images"],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
       });
 
       if (!result.canceled && result.assets[0]) {
-        setEditProfilePicture(result.assets[0].uri);
+        setProfilePicture(result.assets[0].uri);
       }
     } catch (error) {
       Alert.alert("Error", "Failed to pick image");
@@ -93,8 +106,11 @@ export default function ProfileScreen() {
   const takePhoto = async () => {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert("Permission needed", "Camera permission is required to take a photo");
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission needed",
+          "Camera permission is required to take a photo"
+        );
         return;
       }
 
@@ -105,7 +121,7 @@ export default function ProfileScreen() {
       });
 
       if (!result.canceled && result.assets[0]) {
-        setEditProfilePicture(result.assets[0].uri);
+        setProfilePicture(result.assets[0].uri);
       }
     } catch (error) {
       Alert.alert("Error", "Failed to take photo");
@@ -113,54 +129,108 @@ export default function ProfileScreen() {
   };
 
   const showImagePickerOptions = () => {
-    Alert.alert(
-      "Profile Picture",
-      "Choose an option",
-      [
-        { text: "Take Photo", onPress: takePhoto },
-        { text: "Choose from Library", onPress: pickImage },
-        { text: "Cancel", style: "cancel" }
-      ]
-    );
+    Alert.alert("Profile Picture", "Choose an option", [
+      { text: "Take Photo", onPress: takePhoto },
+      { text: "Choose from Library", onPress: pickImage },
+      { text: "Cancel", style: "cancel" },
+    ]);
   };
 
   const handleStatistics = () => {
     setStatisticsModalVisible(true);
   };
 
+  const handleSetWeight = (weight: number) => {
+    setWeight(weight);
+  };
+
+  const handleLeaderboard = () => {
+    setLeaderboardModalVisible(true);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <ThemedText style={styles.userName}>
-          {userData?.name}
-        </ThemedText>
-      </View>
-      
       <View style={styles.profileSection}>
-        <View style={styles.profileRow}>
-          <View style={styles.profilePictureContainer}>
-            {profilePicture ? (
-              <Image source={{ uri: profilePicture }} style={styles.profilePicture} />
-            ) : (
-              <View style={styles.profilePicturePlaceholder}>
-                <MaterialIcons name="person" size={80} color="rgba(255, 255, 255, 0.6)" />
+        <View style={styles.headerRow}>
+          <View style={styles.profileInformationContainer}>
+            <View style={styles.profilePictureContainer}>
+              {profilePicture ? (
+                <Image
+                  source={{ uri: profilePicture }}
+                  style={styles.profilePicture}
+                />
+              ) : (
+                <View style={styles.profilePicturePlaceholder}>
+                  <MaterialIcons
+                    name="person"
+                    size={64}
+                    color="rgba(255, 255, 255, 0.6)"
+                  />
+                </View>
+              )}
+              <View style={styles.usernameContainer}>
+                <Text style={styles.name}>{userData?.name}</Text>
+                <Text style={styles.username}>{userData?.username}</Text>
               </View>
-            )}
+            </View>
           </View>
-          
-          <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
-            <Text style={styles.editButtonText}>Edit Profile</Text>
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={handleEditProfile}
+          >
+            <MaterialIcons name="edit" size={20} color="rgba(0,0,0,1)" />
           </TouchableOpacity>
         </View>
-        
-        <View style={styles.statisticsButtonContainer}>
-          <TouchableOpacity style={styles.statisticsButton} onPress={handleStatistics}>
-            <Text style={styles.statisticsButtonText}>Statistics</Text>
+
+        <View style={styles.cardContainer}>
+          <TouchableOpacity style={styles.card} onPress={handleStatistics}>
+            <View style={styles.cardContent}>
+              <MaterialIcons
+                name="insert-chart"
+                size={24}
+                color="rgba(255,154,2,1)"
+              />
+              <View style={styles.cardTextContainer}>
+                <Text style={styles.cardTitle}>Statistics</Text>
+                <Text style={styles.cardSubtext}>
+                  View your workout analytics
+                </Text>
+              </View>
+            </View>
+            <MaterialIcons
+              name="chevron-right"
+              size={24}
+              color="rgba(170,170,170,1)"
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.card} onPress={handleLeaderboard}>
+            <View style={styles.cardContent}>
+              <MaterialIcons
+                name="leaderboard"
+                size={24}
+                color="rgba(255,154,2,1)"
+              />
+              <View style={styles.cardTextContainer}>
+                <Text style={styles.cardTitle}>Leaderboard</Text>
+                <Text style={styles.cardSubtext}>Check your rankings!</Text>
+                <Text style={styles.cardSubtext}>{score}</Text>
+              </View>
+            </View>
+            <MaterialIcons
+              name="chevron-right"
+              size={24}
+              color="rgba(170,170,170,1)"
+            />
           </TouchableOpacity>
         </View>
       </View>
 
-      <Modal visible={editProfileModalVisible} animationType="slide" transparent={false}>
+      <Modal
+        visible={editProfileModalVisible}
+        animationType="slide"
+        transparent={false}
+      >
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -170,21 +240,37 @@ export default function ProfileScreen() {
             keyboardShouldPersistTaps="handled"
           >
             <View style={styles.editModalHeader}>
-              <TouchableOpacity onPress={() => setEditProfileModalVisible(false)} style={{ marginRight: 12 }}>
-                <MaterialIcons name="close" size={28} color="rgba(255, 255, 255, 1)" />
+              <TouchableOpacity
+                onPress={() => setEditProfileModalVisible(false)}
+                style={{ marginRight: 12 }}
+              >
+                <MaterialIcons
+                  name="close"
+                  size={28}
+                  color="rgba(255, 255, 255, 1)"
+                />
               </TouchableOpacity>
               <Text style={styles.editModalTitle}>Edit Profile</Text>
               <View style={{ width: 28, marginLeft: 12 }} />
             </View>
 
             <View style={styles.editProfilePictureSection}>
-              <TouchableOpacity style={styles.editProfilePictureContainer} onPress={showImagePickerOptions}>
-                {editProfilePicture ? (
-                  <Image source={{ uri: editProfilePicture }} style={styles.editProfilePicture} />
+              <TouchableOpacity
+                style={styles.editProfilePictureContainer}
+                onPress={showImagePickerOptions}
+              >
+                {profilePicture ? (
+                  <Image
+                    source={{ uri: profilePicture }}
+                    style={styles.editProfilePicture}
+                  />
                 ) : (
                   <View style={styles.editProfilePicturePlaceholder}>
-                    <MaterialIcons name="person" size={32} color="rgba(255, 255, 255, 0.6)" />
-                    <Text style={styles.editProfilePictureText}>Change Photo</Text>
+                    <MaterialIcons
+                      name="person"
+                      size={32}
+                      color="rgba(255, 255, 255, 0.6)"
+                    />
                   </View>
                 )}
               </TouchableOpacity>
@@ -192,22 +278,33 @@ export default function ProfileScreen() {
                 <Text style={styles.changePhotoText}>Change Photo</Text>
               </TouchableOpacity>
             </View>
-
-            <TextInput
-              style={styles.editInput}
-              placeholder="Name"
-              placeholderTextColor="rgba(170,170,170,1)"
-              value={editName}
-              onChangeText={setEditName}
-            />
-            <TextInput
-              style={styles.editInput}
-              placeholder="Username"
-              placeholderTextColor="rgba(170,170,170,1)"
-              value={editUsername}
-              onChangeText={setEditUsername}
-            />
-
+            <View>
+              <Text style={styles.inputLabel}>Name</Text>
+              <TextInput
+                style={styles.editInput}
+                placeholder="Name"
+                placeholderTextColor="rgba(170,170,170,1)"
+                value={name}
+                onChangeText={setName}
+              />
+              <Text style={styles.inputLabel}>Username</Text>
+              <TextInput
+                style={styles.editInput}
+                placeholder="Username"
+                placeholderTextColor="rgba(170,170,170,1)"
+                value={username}
+                onChangeText={setUsername}
+              />
+              <Text style={styles.inputLabel}>Weight (kg)</Text>
+              <TextInput
+                style={styles.editInput}
+                placeholder={weight ? weight.toString() : "Set Weight"}
+                placeholderTextColor="rgba(170,170,170,1)"
+                value={weight ? weight.toString() : ""}
+                keyboardType="numeric"
+                onChangeText={(text) => handleSetWeight(Number(text))}
+              />
+            </View>
             <TouchableOpacity
               style={styles.saveButton}
               onPress={handleSaveProfile}
@@ -218,7 +315,11 @@ export default function ProfileScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      <Modal visible={statisticsModalVisible} animationType="slide" transparent={true}>
+      <Modal
+        visible={statisticsModalVisible}
+        animationType="slide"
+        transparent={true}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <KeyboardAvoidingView
@@ -229,45 +330,72 @@ export default function ProfileScreen() {
                 contentContainerStyle={styles.statisticsModalContainer}
                 keyboardShouldPersistTaps="handled"
               >
-            <View style={styles.statisticsModalHeader}>
-              <TouchableOpacity onPress={() => setStatisticsModalVisible(false)} style={{ marginRight: 12 }}>
-                <MaterialIcons name="close" size={28} color="rgba(255, 255, 255, 1)" />
-              </TouchableOpacity>
-              <Text style={styles.statisticsModalTitle}>Statistics</Text>
-              <View style={{ width: 28, marginLeft: 12 }} />
-            </View>
+                <View style={styles.statisticsModalHeader}>
+                  <TouchableOpacity
+                    onPress={() => setStatisticsModalVisible(false)}
+                    style={{ marginRight: 12 }}
+                  >
+                    <MaterialIcons
+                      name="close"
+                      size={28}
+                      color="rgba(255, 255, 255, 1)"
+                    />
+                  </TouchableOpacity>
+                  <Text style={styles.statisticsModalTitle}>Statistics</Text>
+                  <View style={{ width: 28, marginLeft: 12 }} />
+                </View>
 
-            <View style={styles.statisticsContent}>
-              {loading ? (
-                <Text style={styles.statisticsText}>Loading statistics...</Text>
-              ) : error ? (
-                <Text style={styles.statisticsText}>Error: {error}</Text>
-              ) : (
-                <>
-                  <View style={styles.statisticCard}>
-                    <Text style={styles.statisticTitle}>Lifetime Weight Lifted</Text>
-                    <Text style={styles.statisticValue}>{statistics.totalWeight} kg</Text>
-                    <Text style={styles.statisticDescription}>Total weight across all workouts</Text>
-                  </View>
-                  
-                  <View style={styles.statisticCard}>
-                    <Text style={styles.statisticTitle}>Total Workouts</Text>
-                    <Text style={styles.statisticValue}>{statistics.totalWorkouts}</Text>
-                    <Text style={styles.statisticDescription}>Workouts completed</Text>
-                  </View>
-                  
-                  <View style={styles.statisticCard}>
-                    <Text style={styles.statisticTitle}>Average Weight</Text>
-                    <Text style={styles.statisticValue}>{statistics.averageWeight} kg</Text>
-                    <Text style={styles.statisticDescription}>Per workout session</Text>
-                  </View>
-                </>
-              )}
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </View>
-    </View>
+                <View style={styles.statisticsContent}>
+                  {loading ? (
+                    <Text style={styles.statisticsText}>
+                      Loading statistics...
+                    </Text>
+                  ) : error ? (
+                    <Text style={styles.statisticsText}>Error: {error}</Text>
+                  ) : (
+                    <>
+                      <View style={styles.statisticCard}>
+                        <Text style={styles.statisticTitle}>
+                          Lifetime Weight Lifted
+                        </Text>
+                        <Text style={styles.statisticValue}>
+                          {statistics.totalWeight} kg
+                        </Text>
+                        <Text style={styles.statisticDescription}>
+                          Total weight across all workouts
+                        </Text>
+                      </View>
+
+                      <View style={styles.statisticCard}>
+                        <Text style={styles.statisticTitle}>
+                          Total Workouts
+                        </Text>
+                        <Text style={styles.statisticValue}>
+                          {statistics.totalWorkouts}
+                        </Text>
+                        <Text style={styles.statisticDescription}>
+                          Workouts completed
+                        </Text>
+                      </View>
+
+                      <View style={styles.statisticCard}>
+                        <Text style={styles.statisticTitle}>
+                          Average Weight
+                        </Text>
+                        <Text style={styles.statisticValue}>
+                          {statistics.averageWeight} kg
+                        </Text>
+                        <Text style={styles.statisticDescription}>
+                          Per workout session
+                        </Text>
+                      </View>
+                    </>
+                  )}
+                </View>
+              </ScrollView>
+            </KeyboardAvoidingView>
+          </View>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -278,65 +406,89 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#000",
   },
-  header: {
-    height: 40,
-    paddingHorizontal: 16,
-    alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(34,34,34,1)",
-    flexDirection: "row",
-    justifyContent: "flex-start",
-  },
-  userName: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "rgba(255,255,255,1)",
-  },
   profileSection: {
-    paddingHorizontal: 16,
-    paddingTop: 20,
+    paddingHorizontal: 20,
+    paddingTop: 24,
   },
-  profileRow: {
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  profileInformationContainer: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "flex-start",
   },
   profilePictureContainer: {
-    width: 180,
-    height: 180,
-    borderRadius: 100,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  profilePicture: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+  },
+  profilePicturePlaceholder: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: "rgba(34, 34, 34, 1)",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 2,
-    borderColor: "rgba(51, 51, 51, 1)",
   },
-  profilePicture: {
-    width: 180,
-    height: 180,
-    borderRadius: 100,
-  },
-  profilePicturePlaceholder: {
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  profilePictureText: {
-    fontSize: 32,
+  name: {
+    fontSize: 20,
     fontWeight: "bold",
-    color: "rgba(255, 255, 255, 0.8)",
+    color: "rgba(255, 255, 255, 1)",
+  },
+  username: {
+    fontSize: 14,
+    color: "rgba(170, 170, 170, 1)",
+    marginTop: 4,
   },
   editButton: {
     backgroundColor: "rgba(255, 154, 2, 1)",
-    borderRadius: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
     alignItems: "center",
-    marginLeft: 40,
   },
-  editButtonText: {
-    color: "rgb(0, 0, 0)",
+  cardContainer: {
+    marginTop: 16,
+  },
+  card: {
+    backgroundColor: "rgba(34, 34, 34, 1)",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: "rgba(51, 51, 51, 1)",
+  },
+  cardContent: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  cardTextContainer: {
+    marginLeft: 16,
+  },
+  cardTitle: {
+    color: "rgba(255, 255, 255, 1)",
     fontSize: 16,
     fontWeight: "600",
+  },
+  cardSubtext: {
+    color: "rgba(170, 170, 170, 1)",
+    fontSize: 12,
+    marginTop: 4,
+  },
+  usernameContainer: {
+    flexDirection: "column",
+    paddingLeft: 20,
   },
   editModalContainer: {
     flex: 1,
@@ -381,11 +533,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  editProfilePictureText: {
-    color: "rgba(255, 255, 255, 0.6)",
-    fontSize: 12,
-    marginTop: 4,
-  },
   changePhotoText: {
     color: "rgba(255, 154, 2, 1)",
     fontSize: 14,
@@ -401,6 +548,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(51, 51, 51, 1)",
     color: "rgba(255, 255, 255, 1)",
+    paddingRight: 40,
   },
   saveButton: {
     width: "100%",
@@ -414,23 +562,6 @@ const styles = StyleSheet.create({
     color: "rgb(0, 0, 0)",
     fontSize: 16,
     fontWeight: "bold",
-  },
-  statisticsButtonContainer: {
-    alignItems: "center",
-    marginTop: 20,
-  },
-  statisticsButton: {
-    backgroundColor: "rgba(34, 34, 34, 1)",
-    borderRadius: 8,
-    paddingHorizontal: 120,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: "rgba(51, 51, 51, 1)",
-  },
-  statisticsButtonText: {
-    color: "rgba(255, 255, 255, 1)",
-    fontSize: 16,
-    fontWeight: "600",
   },
   statisticsModalContainer: {
     flex: 1,
@@ -502,5 +633,11 @@ const styles = StyleSheet.create({
     color: "rgba(170, 170, 170, 1)",
     fontSize: 12,
     textAlign: "left",
+  },
+  inputLabel: {
+    color: "rgba(255, 255, 255, 0.7)",
+    fontSize: 14,
+    marginBottom: 8,
+    marginLeft: 4,
   },
 });

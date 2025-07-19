@@ -1,6 +1,6 @@
 export interface ExerciseSet {
-    weight: string;
-    reps: string;
+    weight: number;
+    reps: number;
 }
 
 export interface ExerciseEntry {
@@ -14,6 +14,7 @@ export interface SavedWorkout {
     exercises: ExerciseEntry[];
     date: Date;
     duration?: number;
+    workoutScore: number;
 }
 
 
