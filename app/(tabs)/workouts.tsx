@@ -354,9 +354,6 @@ const WorkoutScreen: React.FC = () => {
       const userSnapshot = await getDoc(userRef);
       if (userSnapshot.exists()) {
         const newScore = score + addedScore;
-        console.log(newScore + "new");
-        console.log(score + "sc");
-        console.log(addedScore + "add");
         setScore(newScore);
 
         await updateDoc(userRef, {
