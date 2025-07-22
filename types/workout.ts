@@ -13,7 +13,7 @@ export interface SavedWorkout {
     id?: string;
     exercises: ExerciseEntry[];
     date: Date;
-    duration?: number;
+    duration?: string;
     workoutScore: number;
 }
 

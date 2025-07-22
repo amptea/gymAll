@@ -11,7 +11,7 @@ import {
   getDocs,
   updateDoc,
 } from "firebase/firestore";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -58,6 +58,9 @@ const WorkoutScreen: React.FC = () => {
   const [currentDurationEdited, setCurrentDurationEdited] = useState("");
   const [weight, setWeight] = useState(0);
   const [score, setScore] = useState(0);
+  const [startTime, setStartTime] = useState<Date | null>(null);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const timerRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -71,9 +74,15 @@ const WorkoutScreen: React.FC = () => {
   );
 
   const cancelWorkout = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
     setAddedExercises([]);
     setWorkoutDuration("");
     setWorkoutStartedPage(false);
+    setElapsedTime(0);
+    setStartTime(null);
   };
 
   const finishWorkout = async () => {
@@ -82,13 +91,23 @@ const WorkoutScreen: React.FC = () => {
         "Please update youur weight in the profile page before saving workouts."
       );
     }
+
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+
+    const durationInMinutes = Math.floor(elapsedTime / 60);
+    const durationInSeconds = elapsedTime % 60;
+    const duration = "{durationInMinutes}m {durationInSeconds}s";
+
     if (addedExercises.length > 0 && user) {
       try {
         const newWorkout: SavedWorkout = {
           userId: user.uid,
           exercises: addedExercises,
           date: new Date(),
-          duration: workoutDuration ? parseInt(workoutDuration) : undefined,
+          duration: duration,
           workoutScore: 0,
         };
 
@@ -101,6 +120,8 @@ const WorkoutScreen: React.FC = () => {
 
         setAddedExercises([]);
         setWorkoutDuration("");
+        setElapsedTime(0);
+        setStartTime(null);
         setWorkoutStartedPage(false);
       } catch (error) {
         Alert.alert("Error", "Workout not saved successfully");
@@ -135,6 +156,16 @@ const WorkoutScreen: React.FC = () => {
     });
   };
 
+  function formatDuration(elapsedTime: number): string {
+    const minutes = Math.floor(elapsedTime / 60);
+    const seconds = elapsedTime % 60;
+    return (
+      minutes.toString().padStart(2, "0") +
+      " : " +
+      seconds.toString().padStart(2, "0")
+    );
+  }
+
   const getTotalSets = (exercises: ExerciseEntry[]) => {
     return exercises.reduce(
       (total, exercise) => total + exercise.sets.length,
@@ -163,9 +194,6 @@ const WorkoutScreen: React.FC = () => {
         const updatedWorkout: SavedWorkout = {
           ...currentWorkoutEdited,
           exercises: currentExercisesEdited,
-          duration: currentDurationEdited
-            ? parseInt(currentDurationEdited)
-            : undefined,
         };
 
         if (currentWorkoutEdited.id) {
@@ -272,7 +300,7 @@ const WorkoutScreen: React.FC = () => {
 
       return workoutsDoc.id;
     } catch (error) {
-      Alert.alert("Error", "Workout not saved successfully");
+      Alert.alert("Error", "Unable to save workout");
     }
   };
 
@@ -302,7 +330,7 @@ const WorkoutScreen: React.FC = () => {
         workoutScore: newScore,
       });
     } catch (error) {
-      Alert.alert("Error", "Workout not updated successfully");
+      Alert.alert("Error", "Unable to update workout");
     }
   };
 
@@ -322,7 +350,7 @@ const WorkoutScreen: React.FC = () => {
       }
       await deleteDoc(workoutRef);
     } catch (error) {
-      Alert.alert("Error", "Workout not deleted successfully");
+      Alert.alert("Error", "Unable to delete workout");
     }
   };
 
@@ -383,7 +411,7 @@ const WorkoutScreen: React.FC = () => {
         <Text style={styles.headerText}>Workout</Text>
       </View>
 
-      <View style={styles.contentContainer}>
+      <View>
         <ScrollView showsVerticalScrollIndicator={false}>
           <View style={styles.routinesSection}>
             <Text style={styles.subHeader}>Routines</Text>
@@ -447,7 +475,7 @@ const WorkoutScreen: React.FC = () => {
                       {workout.duration && (
                         <View style={styles.statsItem}>
                           <Text style={styles.statsNumber}>
-                            {workout.duration}m
+                            {workout.duration}
                           </Text>
                           <Text style={styles.statsLabel}>duration</Text>
                         </View>
@@ -489,12 +517,56 @@ const WorkoutScreen: React.FC = () => {
         </ScrollView>
 
         <View style={styles.workoutButtonSection}>
-          <TouchableOpacity
-            style={styles.startWorkoutButton}
-            onPress={() => setWorkoutStartedPage(true)}
-          >
-            <Text style={styles.workoutButtonText}>Start Workout</Text>
-          </TouchableOpacity>
+          {startTime && !workoutStartedPage ? (
+            <View style={styles.workoutInProgressContainer}>
+              <Text style={styles.workoutInProgressText}>
+                Workout In Progress!
+              </Text>
+              <View style={styles.workoutInProgressButtons}>
+                <TouchableOpacity
+                  style={styles.resumeButton}
+                  onPress={() => setWorkoutStartedPage(true)}
+                >
+                  <Ionicons
+                    name="play-circle"
+                    size={24}
+                    color="rgba(30, 144, 255, 0.9)"
+                  />
+                  <Text style={styles.resumeButtonText}>Resume</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.discardButton}
+                  onPress={cancelWorkout}
+                >
+                  <Ionicons
+                    name="trash-bin"
+                    size={24}
+                    color="rgba(230, 25, 25, 0.9)"
+                  />
+
+                  <Text style={styles.discardButtonText}>Discard</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.startWorkoutButton}
+              onPress={() => {
+                setStartTime(new Date());
+                setElapsedTime(0);
+                if (timerRef.current) {
+                  clearInterval(timerRef.current);
+                }
+
+                timerRef.current = setInterval(() => {
+                  setElapsedTime((prev) => prev + 1);
+                }, 1000);
+                setWorkoutStartedPage(true);
+              }}
+            >
+              <Text style={styles.workoutButtonText}>Start Workout</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -550,7 +622,7 @@ const WorkoutScreen: React.FC = () => {
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => setWorkoutDetailPage(false)}
-                  style={styles.closeDetailButton}
+                  style={styles.editWorkoutButton}
                 >
                   <Ionicons name="close" size={24} color="white" />
                 </TouchableOpacity>
@@ -611,24 +683,11 @@ const WorkoutScreen: React.FC = () => {
             </View>
 
             <View style={styles.scrollableContent}>
-              <ScrollView
-                style={styles.exercisesAddedBox}
-                showsVerticalScrollIndicator={false}
-              >
-                <Text style={styles.exercisesAddedText}>Added Exercises:</Text>
-
-                <View style={styles.durationInputContainer}>
-                  <Text style={styles.durationLabel}>
-                    Workout Duration (minutes):
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <View style={styles.durationContainer}>
+                  <Text style={styles.timerText}>
+                    {formatDuration(elapsedTime)}
                   </Text>
-                  <TextInput
-                    placeholder="Enter duration"
-                    placeholderTextColor="rgba(170,170,170,1)"
-                    value={workoutDuration}
-                    onChangeText={setWorkoutDuration}
-                    style={styles.durationInput}
-                    keyboardType="numeric"
-                  />
                 </View>
 
                 {addedExercises.length === 0 ? (
@@ -698,7 +757,7 @@ const WorkoutScreen: React.FC = () => {
 
             <View style={styles.fixedButtonsContainer}>
               <TouchableOpacity
-                style={styles.discardButton}
+                style={styles.cancelWorkoutButton}
                 onPress={cancelWorkout}
               >
                 <Text style={styles.workoutButtonText}>Cancel Workout</Text>
@@ -779,7 +838,7 @@ const WorkoutScreen: React.FC = () => {
               </View>
               <TouchableOpacity
                 onPress={cancelEditWorkout}
-                style={styles.closeDetailButton}
+                style={styles.editWorkoutButton}
               >
                 <Ionicons name="close" size={24} color="white" />
               </TouchableOpacity>
@@ -789,20 +848,6 @@ const WorkoutScreen: React.FC = () => {
               style={styles.editWorkoutScroll}
               showsVerticalScrollIndicator={false}
             >
-              <View style={styles.durationInputContainer}>
-                <Text style={styles.durationLabel}>
-                  Workout Duration (minutes):
-                </Text>
-                <TextInput
-                  placeholder="Enter duration"
-                  placeholderTextColor="rgba(170,170,170,1)"
-                  value={currentDurationEdited}
-                  onChangeText={setCurrentDurationEdited}
-                  style={styles.durationInput}
-                  keyboardType="numeric"
-                />
-              </View>
-
               <Text style={styles.exercisesAddedText}>Exercises:</Text>
 
               {currentExercisesEdited.map((exercise, exerciseIndex) => (
@@ -872,27 +917,19 @@ const WorkoutScreen: React.FC = () => {
                   </TouchableOpacity>
                 </View>
               ))}
-
-              <TouchableOpacity
-                style={styles.addExerciseToEditButton}
-                onPress={() => setAddExercisePage(true)}
-              >
-                <Text style={styles.workoutButtonText}>+ Add Exercise</Text>
-              </TouchableOpacity>
             </ScrollView>
 
             <View style={styles.editWorkoutFooter}>
               <TouchableOpacity
-                style={styles.saveWorkoutButton}
-                onPress={saveEditedWorkout}
+                style={styles.addWorkouutButton}
+                onPress={() => setAddExercisePage(true)}
               >
-                <Text style={styles.workoutButtonText}>Save Changes</Text>
+                <Text style={styles.workoutButtonText}>+ Add Exercise</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.finishEditWorkoutButton}
                 onPress={() => {
                   saveEditedWorkout();
-                  setEditWorkoutPage(false);
                 }}
               >
                 <Text style={styles.workoutButtonText}>Finish</Text>
@@ -956,7 +993,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "rgb(0, 0, 0)",
-    paddingHorizontal: 16,
   },
   headerContainer: {
     paddingTop: 16,
@@ -968,11 +1004,9 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,1)",
     fontWeight: "600",
   },
-  contentContainer: {
-    flex: 1,
-  },
   routinesSection: {
     marginTop: 24,
+    paddingHorizontal: 20,
   },
   subHeader: {
     color: "rgba(255, 255, 255, 0.5)",
@@ -1000,7 +1034,7 @@ const styles = StyleSheet.create({
   previousWorkoutsSection: {
     marginTop: 24,
     marginBottom: 20,
-    paddingHorizontal: 4,
+    paddingHorizontal: 20,
   },
   workoutCard: {
     backgroundColor: "rgba(30, 30, 30, 0.8)",
@@ -1112,9 +1146,6 @@ const styles = StyleSheet.create({
   editWorkoutButton: {
     padding: 8,
   },
-  closeDetailButton: {
-    padding: 8,
-  },
   exerciseDetailsCard: {
     backgroundColor: "rgba(30, 30, 30, 0.6)",
     borderRadius: 12,
@@ -1147,19 +1178,22 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   workoutButtonSection: {
-    position: "absolute",
-    bottom: 66,
-    left: 20,
-    right: 20,
-    zIndex: 10,
     backgroundColor: "rgb(0, 0, 0)",
+    width: "100%",
+    paddingVertical: 65,
   },
   startWorkoutButton: {
+    position: "absolute",
+    bottom: 0,
+    left: 37,
+    right: 37,
     backgroundColor: "rgba(255, 154, 2, 1)",
-    padding: 12.5,
+    paddingVertical: 12.5,
     borderRadius: 25,
     alignItems: "center",
+    justifyContent: "center",
   },
+
   workoutButtonText: {
     color: "rgb(0, 0, 0)",
     fontSize: 16,
@@ -1205,9 +1239,6 @@ const styles = StyleSheet.create({
     flex: 1,
     marginBottom: 20,
   },
-  exercisesAddedBox: {
-    flex: 1,
-  },
   addedExercises: {
     marginBottom: 20,
   },
@@ -1241,18 +1272,63 @@ const styles = StyleSheet.create({
     borderTopColor: "rgba(255,255,255,0.1)",
   },
   addExerciseButton: {
-    flex: 1,
     backgroundColor: "rgba(255, 154, 2, 1)",
     padding: 12.5,
     borderRadius: 25,
     alignItems: "center",
+    width: "50%",
   },
-  discardButton: {
-    flex: 1,
-    backgroundColor: "#ff4c4c",
+  cancelWorkoutButton: {
+    backgroundColor: "rgba(230, 25, 25, 0.9)",
     padding: 12.5,
     borderRadius: 25,
     alignItems: "center",
+    width: "50%",
+  },
+
+  workoutInProgressContainer: {
+    backgroundColor: "rgba(27, 27, 27, 1)",
+    alignItems: "center",
+    paddingBottom: 30,
+    marginTop: 16,
+  },
+  workoutInProgressText: {
+    color: "rgba(105, 100, 100, 0.8)",
+    fontSize: 16,
+    fontWeight: "600",
+    paddingTop: 12,
+    fontFamily: "Inter",
+  },
+  workoutInProgressButtons: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 80,
+    paddingBottom: 16,
+  },
+  discardButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  resumeButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  discardButtonText: {
+    color: "rgba(230, 25, 25, 0.9)",
+    fontSize: 16,
+    marginLeft: 12,
+  },
+  resumeButtonText: {
+    color: "rgba(30, 144, 255, 0.9)",
+    fontSize: 16,
+    marginLeft: 12,
   },
   closeButton: {
     marginTop: 16,
@@ -1294,22 +1370,14 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 20,
   },
-  durationInputContainer: {
-    flexDirection: "row",
+  durationContainer: {
     alignItems: "center",
     marginBottom: 12,
   },
-  durationLabel: {
-    color: "rgba(255,255,255,0.6)",
-    fontSize: 14,
-    marginRight: 10,
-  },
-  durationInput: {
-    flex: 1,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    color: "#fff",
-    padding: 10,
-    borderRadius: 8,
+  timerText: {
+    color: "rgba(255, 255, 255, 1)",
+    fontWeight: "600",
+    fontSize: 24,
   },
   editWorkoutOverlay: {
     flex: 1,
@@ -1389,7 +1457,7 @@ const styles = StyleSheet.create({
     borderTopColor: "rgba(255,255,255,0.1)",
     gap: 12,
   },
-  saveWorkoutButton: {
+  addWorkouutButton: {
     flex: 1,
     backgroundColor: "rgba(255, 154, 2, 1)",
     padding: 12.5,
@@ -1402,13 +1470,6 @@ const styles = StyleSheet.create({
     padding: 12.5,
     borderRadius: 25,
     alignItems: "center",
-  },
-  addExerciseToEditButton: {
-    backgroundColor: "rgba(255, 154, 2, 1)",
-    padding: 12.5,
-    borderRadius: 25,
-    alignItems: "center",
-    marginTop: 16,
   },
 });
 

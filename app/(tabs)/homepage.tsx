@@ -4,7 +4,17 @@ import { useAuth } from "@/hooks/useAuth";
 import { ExerciseEntry, SavedWorkout } from "@/types/workout";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { arrayRemove, arrayUnion, collection, doc, getDoc, getDocs, query, updateDoc, where } from "firebase/firestore";
+import {
+  arrayRemove,
+  arrayUnion,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  updateDoc,
+  where,
+} from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
@@ -14,9 +24,8 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
-
 
 const HomepageScreen: React.FC = () => {
   const { user, handleSignOut } = useAuth();
@@ -28,8 +37,12 @@ const HomepageScreen: React.FC = () => {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [followingUsers, setFollowingUsers] = useState<Set<string>>(new Set());
   const [friendsWorkouts, setFriendsWorkouts] = useState<SavedWorkout[]>([]);
-  const [userIdNameMap, setUserIdNameMap] = useState<{[key: string]: string}>({});
-  const [selectedWorkout, setSelectedWorkout] = useState<SavedWorkout | null>(null);
+  const [userIdNameMap, setUserIdNameMap] = useState<{ [key: string]: string }>(
+    {}
+  );
+  const [selectedWorkout, setSelectedWorkout] = useState<SavedWorkout | null>(
+    null
+  );
   const [workoutDetailPage, setWorkoutDetailPage] = useState(false);
 
   useEffect(() => {
@@ -48,7 +61,7 @@ const HomepageScreen: React.FC = () => {
           setName(userData.name);
         }
       }
-    }
+    };
     getUsername();
   }, []);
 
@@ -66,20 +79,24 @@ const HomepageScreen: React.FC = () => {
 
   const searchByUsername = async (username: string) => {
     const usersRef = collection(db, "users");
-    const q = query(usersRef, where("username", ">=", username), where("username", "<=", username + "\uf8ff"));
+    const q = query(
+      usersRef,
+      where("username", ">=", username),
+      where("username", "<=", username + "\uf8ff")
+    );
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs
       .filter((doc) => doc.id !== user?.uid)
       .map((doc) => ({ ...doc.data(), id: doc.id }));
-  }
+  };
 
   const addFriend = async (currentUserId: string, friendUserId: string) => {
     try {
-      const currentUserRef = doc(db, 'users', currentUserId);
+      const currentUserRef = doc(db, "users", currentUserId);
       await updateDoc(currentUserRef, {
         friends: arrayUnion(friendUserId),
       });
-      setFollowingUsers(prevSet => new Set(prevSet).add(friendUserId));
+      setFollowingUsers((prevSet) => new Set(prevSet).add(friendUserId));
     } catch (error) {
       Alert.alert("Error", "Friend not added successfully");
     }
@@ -89,9 +106,9 @@ const HomepageScreen: React.FC = () => {
     if (!user) {
       Alert.alert("Error", "User not found");
       return;
-    }   
+    }
     try {
-      const currentUserRef = doc(db, 'users', user.uid);
+      const currentUserRef = doc(db, "users", user.uid);
       const currentUserDoc = await getDoc(currentUserRef);
       if (currentUserDoc.exists()) {
         const currentUserData = currentUserDoc.data();
@@ -102,7 +119,7 @@ const HomepageScreen: React.FC = () => {
     } catch (error) {
       Alert.alert("Error", "Unable to load users followed");
     }
-  }
+  };
 
   const removeFriend = async (currentUserId: string, friendUserId: string) => {
     if (!user) {
@@ -110,11 +127,11 @@ const HomepageScreen: React.FC = () => {
       return;
     }
     try {
-      const currentUserRef = doc(db, 'users', currentUserId);
+      const currentUserRef = doc(db, "users", currentUserId);
       await updateDoc(currentUserRef, {
         friends: arrayRemove(friendUserId),
       });
-      setFollowingUsers(prevSet => {
+      setFollowingUsers((prevSet) => {
         const newSet = new Set(prevSet);
         newSet.delete(friendUserId);
         return newSet;
@@ -129,15 +146,16 @@ const HomepageScreen: React.FC = () => {
       Alert.alert("Error", "User not found");
       return;
     }
-    
+
     const isFollowing = followingUsers.has(friendUserId);
-    
+
     if (isFollowing) {
       await removeFriend(user.uid, friendUserId);
-      setFriendsWorkouts(prevWorkouts => 
-        prevWorkouts.filter(workout => workout.userId !== friendUserId));
-      setUserIdNameMap(prevMap => {
-        const newMap = {...prevMap};
+      setFriendsWorkouts((prevWorkouts) =>
+        prevWorkouts.filter((workout) => workout.userId !== friendUserId)
+      );
+      setUserIdNameMap((prevMap) => {
+        const newMap = { ...prevMap };
         delete newMap[friendUserId];
         return newMap;
       });
@@ -153,10 +171,10 @@ const HomepageScreen: React.FC = () => {
       return;
     }
     try {
-      const workoutRef = collection(db, 'workouts');
+      const workoutRef = collection(db, "workouts");
       const workoutList = await getDocs(workoutRef);
       const workouts: SavedWorkout[] = [];
-      const userIdMap: {[key: string]: string} = {};
+      const userIdMap: { [key: string]: string } = {};
 
       for (const docSnapshot of workoutList.docs) {
         const data = docSnapshot.data();
@@ -167,11 +185,12 @@ const HomepageScreen: React.FC = () => {
             exercises: data.exercises,
             date: data.date.toDate(),
             duration: data.duration,
+            workoutScore: data.workoutScore,
           });
-          
+
           if (data.userId && !userIdMap[data.userId]) {
             try {
-              const userRef = doc(db, 'users', data.userId);
+              const userRef = doc(db, "users", data.userId);
               const userDoc = await getDoc(userRef);
               if (userDoc.exists()) {
                 const userData = userDoc.data();
@@ -184,11 +203,11 @@ const HomepageScreen: React.FC = () => {
         }
       }
       setFriendsWorkouts(workouts);
-      setUserIdNameMap(prevMap => ({...prevMap, ...userIdMap}));
+      setUserIdNameMap((prevMap) => ({ ...prevMap, ...userIdMap }));
     } catch (error) {
       Alert.alert("Error", "Unable to load friends workouts");
     }
-  }
+  };
 
   const formatDate = (date: Date) => {
     const today = new Date();
@@ -237,31 +256,37 @@ const HomepageScreen: React.FC = () => {
           <ThemedText style={styles.headerTextAll}>All</ThemedText>
         </View>
         <View style={styles.headerIconsContainer}>
-        <TouchableOpacity onPress={() => setSettingsPage(true)}>
-          <Ionicons name="settings-outline" size={24} color="rgba(255, 255, 255, 0.8)" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => setAddFriendsPage(true)}>
-        <Ionicons name="person-add-outline" size={24} color="rgba(255,255,255,0.8)" />
+          <TouchableOpacity onPress={() => setSettingsPage(true)}>
+            <Ionicons
+              name="settings-outline"
+              size={24}
+              color="rgba(255, 255, 255, 0.8)"
+            />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setAddFriendsPage(true)}>
+            <Ionicons
+              name="person-add-outline"
+              size={24}
+              color="rgba(255,255,255,0.8)"
+            />
           </TouchableOpacity>
         </View>
       </View>
 
-      <Modal
-        visible={settingsPage}
-        animationType="slide"
-        transparent={true}
-      >
+      <Modal visible={settingsPage} animationType="slide" transparent={true}>
         <View style={styles.settingsOverlay}>
           <View style={styles.settingsContent}>
             <View style={styles.settingsHeader}>
-            <TouchableOpacity onPress={() => setSettingsPage(false)}>
-                  <Ionicons
-                    name="chevron-back"
-                    size={28}
-                    color="rgb(255, 255, 255)"
-                  />
-                </TouchableOpacity>
-            <ThemedText style={styles.settingsHeaderText}>Settings</ThemedText>
+              <TouchableOpacity onPress={() => setSettingsPage(false)}>
+                <Ionicons
+                  name="chevron-back"
+                  size={28}
+                  color="rgb(255, 255, 255)"
+                />
+              </TouchableOpacity>
+              <ThemedText style={styles.settingsHeaderText}>
+                Settings
+              </ThemedText>
             </View>
             {/* To be continued, now just shows username and name */}
             <View style={styles.settingsText}>
@@ -272,28 +297,26 @@ const HomepageScreen: React.FC = () => {
               style={styles.signOutButton}
               onPress={handleSignOut}
             >
-            <ThemedText style={styles.signOutText}>Sign Out</ThemedText>
+              <ThemedText style={styles.signOutText}>Sign Out</ThemedText>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
-      <Modal
-        visible={addFriendsPage}
-        animationType="slide"
-        transparent={true}
-      >
+      <Modal visible={addFriendsPage} animationType="slide" transparent={true}>
         <View style={styles.addFriendsOverlay}>
           <View style={styles.addFriendsContent}>
             <View style={styles.addFriendsHeader}>
-            <TouchableOpacity onPress={() => setAddFriendsPage(false)}>
-                  <Ionicons
-                    name="chevron-back"
-                    size={28}
-                    color="rgb(255, 255, 255)"
-                  />
-                </TouchableOpacity>
-            <ThemedText style={styles.addFriendsHeaderText}>Friends</ThemedText>
+              <TouchableOpacity onPress={() => setAddFriendsPage(false)}>
+                <Ionicons
+                  name="chevron-back"
+                  size={28}
+                  color="rgb(255, 255, 255)"
+                />
+              </TouchableOpacity>
+              <ThemedText style={styles.addFriendsHeaderText}>
+                Friends
+              </ThemedText>
             </View>
             <TextInput
               style={styles.searchInput}
@@ -319,26 +342,40 @@ const HomepageScreen: React.FC = () => {
                     <View key={index}>
                       <View style={styles.userRow}>
                         <View style={styles.userInfo}>
-                        {user.name && <ThemedText style={styles.nameText}>{user.name}</ThemedText>}
-                          <ThemedText style={styles.usernameText}>{user.username}</ThemedText>
+                          {user.name && (
+                            <ThemedText style={styles.nameText}>
+                              {user.name}
+                            </ThemedText>
+                          )}
+                          <ThemedText style={styles.usernameText}>
+                            {user.username}
+                          </ThemedText>
                         </View>
-                        { isFollowing ? (
-                          <TouchableOpacity 
-                            style={styles.followButtonFollowed} 
+                        {isFollowing ? (
+                          <TouchableOpacity
+                            style={styles.followButtonFollowed}
                             onPress={() => toggleFollow(user.id)}
                           >
-                            <ThemedText style={styles.followButtonFollowedText}>Following</ThemedText>
+                            <ThemedText style={styles.followButtonFollowedText}>
+                              Following
+                            </ThemedText>
                           </TouchableOpacity>
-                          ) : (
-                          <TouchableOpacity 
-                            style={styles.followButtonUnfollowed} 
+                        ) : (
+                          <TouchableOpacity
+                            style={styles.followButtonUnfollowed}
                             onPress={() => toggleFollow(user.id)}
                           >
-                            <ThemedText style={styles.followButtonUnfollowedText}>Follow</ThemedText>
+                            <ThemedText
+                              style={styles.followButtonUnfollowedText}
+                            >
+                              Follow
+                            </ThemedText>
                           </TouchableOpacity>
                         )}
                       </View>
-                      {index < searchResults.length - 1 && <View style={styles.userSeparator} />}
+                      {index < searchResults.length - 1 && (
+                        <View style={styles.userSeparator} />
+                      )}
                     </View>
                   );
                 })}
@@ -352,139 +389,147 @@ const HomepageScreen: React.FC = () => {
       </Modal>
 
       <ScrollView style={styles.homepageContainer}>
-      {friendsWorkouts.length > 0 ? (
-            <View style={styles.friendsWorkoutsSection}>
-              <ThemedText style={styles.subHeader}>Activities</ThemedText>
-              {friendsWorkouts.map((workout, workoutIndex) => (
-                <TouchableOpacity
-                  key={workoutIndex}
-                  style={styles.friendsWorkoutCard}
-                  onPress={() => openWorkoutDetail(workout)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.friendsWorkoutCardHeader}>
-                    <View>
-                      <ThemedText style={styles.friendsName}>
-                        {userIdNameMap[workout.userId || '']}
+        {friendsWorkouts.length > 0 ? (
+          <View style={styles.friendsWorkoutsSection}>
+            <ThemedText style={styles.subHeader}>Activities</ThemedText>
+            {friendsWorkouts.map((workout, workoutIndex) => (
+              <TouchableOpacity
+                key={workoutIndex}
+                style={styles.friendsWorkoutCard}
+                onPress={() => openWorkoutDetail(workout)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.friendsWorkoutCardHeader}>
+                  <View>
+                    <ThemedText style={styles.friendsName}>
+                      {userIdNameMap[workout.userId || ""]}
+                    </ThemedText>
+                    <ThemedText style={styles.workoutDateTime}>
+                      {formatDate(workout.date)} at {formatTime(workout.date)}
+                    </ThemedText>
+                  </View>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={20}
+                    color="rgba(255,255,255,0.4)"
+                  />
+                </View>
+
+                <View style={styles.friendsWorkoutCardBody}>
+                  <View style={styles.workoutStats}>
+                    <View style={styles.statsItem}>
+                      <ThemedText style={styles.statsNumber}>
+                        {workout.exercises.length}
                       </ThemedText>
-                      <ThemedText style={styles.workoutDateTime}>
-                        {formatDate(workout.date)} at {formatTime(workout.date)}
+                      <ThemedText style={styles.statsLabel}>
+                        exercises
                       </ThemedText>
                     </View>
-                    <Ionicons
-                      name="chevron-forward"
-                      size={20}
-                      color="rgba(255,255,255,0.4)"
-                    />
-                  </View>
-                  
-                  <View style={styles.friendsWorkoutCardBody}>
-                    <View style={styles.workoutStats}>
+                    <View style={styles.statsItem}>
+                      <ThemedText style={styles.statsNumber}>
+                        {getTotalSets(workout.exercises)}
+                      </ThemedText>
+                      <ThemedText style={styles.statsLabel}>sets</ThemedText>
+                    </View>
+                    {workout.duration && (
                       <View style={styles.statsItem}>
                         <ThemedText style={styles.statsNumber}>
-                          {workout.exercises.length}
+                          {workout.duration}
                         </ThemedText>
-                        <ThemedText style={styles.statsLabel}>exercises</ThemedText>
-                      </View>
-                      <View style={styles.statsItem}>
-                        <ThemedText style={styles.statsNumber}>
-                          {getTotalSets(workout.exercises)}
+                        <ThemedText style={styles.statsLabel}>
+                          duration
                         </ThemedText>
-                        <ThemedText style={styles.statsLabel}>sets</ThemedText>
                       </View>
-                      {workout.duration && (
-                        <View style={styles.statsItem}>
-                          <ThemedText style={styles.statsNumber}>
-                            {workout.duration} min
-                          </ThemedText>
-                          <ThemedText style={styles.statsLabel}>duration</ThemedText>
-                        </View>
-                      )}
-                    </View>
-                    <View>
-                      <ThemedText style={styles.exercisePreviewText}>
-                        {workout.exercises
-                          .slice(0, 3)
-                          .map((exercise) => exercise.name)
-                          .join(", ")}
-                        {workout.exercises.length > 3 &&
-                          ` +${workout.exercises.length - 3} more`}
-                      </ThemedText>
-                    </View>
+                    )}
                   </View>
-                </TouchableOpacity>
-              ))}
+                  <View>
+                    <ThemedText style={styles.exercisePreviewText}>
+                      {workout.exercises
+                        .slice(0, 3)
+                        .map((exercise) => exercise.name)
+                        .join(", ")}
+                      {workout.exercises.length > 3 &&
+                        ` +${workout.exercises.length - 3} more`}
+                    </ThemedText>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : (
+          <View style={styles.friendsWorkoutsSection}>
+            <ThemedText style={styles.subHeader}>Activities</ThemedText>
+            <View style={styles.emptyStateContainer}>
+              <ThemedText style={styles.noActivitiesText}>
+                No friends' activities yet.
+              </ThemedText>
+              <ThemedText style={styles.noActivitiesSubText}>
+                Add a friend now to see their activities!
+              </ThemedText>
             </View>
-          ) : (
-            <View style={styles.friendsWorkoutsSection}>
-              <ThemedText style={styles.subHeader}>Activities</ThemedText>
-              <View style={styles.emptyStateContainer}>
-                <ThemedText style={styles.noActivitiesText}>
-                  No friends' activities yet.
-                </ThemedText>
-                <ThemedText style={styles.noActivitiesSubText}>
-                  Add a friend now to see their activities!
-                </ThemedText>
-              </View>
-            </View>
-          )}
+          </View>
+        )}
       </ScrollView>
       <Modal
-      visible={workoutDetailPage}
-      animationType="slide"
-      transparent={true}
-    >
-      <View style={styles.workoutDetailOverlay}>
-        <View style={styles.workoutDetailContent}>
-          <View style={styles.workoutDetailHeader}>
-            <View>
-              <ThemedText style={styles.friendsName}>
-                {selectedWorkout ? userIdNameMap[selectedWorkout.userId || ''] : ""}
-              </ThemedText>
-              <ThemedText style={styles.workoutDateTime}>
-                {selectedWorkout ? formatDate(selectedWorkout.date) + 
-                " at " + 
-                formatTime(selectedWorkout.date) : ""}
-              </ThemedText>
-            </View>
-            <View>
+        visible={workoutDetailPage}
+        animationType="slide"
+        transparent={true}
+      >
+        <View style={styles.workoutDetailOverlay}>
+          <View style={styles.workoutDetailContent}>
+            <View style={styles.workoutDetailHeader}>
+              <View>
+                <ThemedText style={styles.friendsName}>
+                  {selectedWorkout
+                    ? userIdNameMap[selectedWorkout.userId || ""]
+                    : ""}
+                </ThemedText>
+                <ThemedText style={styles.workoutDateTime}>
+                  {selectedWorkout
+                    ? formatDate(selectedWorkout.date) +
+                      " at " +
+                      formatTime(selectedWorkout.date)
+                    : ""}
+                </ThemedText>
+              </View>
+              <View>
                 <TouchableOpacity
                   onPress={() => setWorkoutDetailPage(false)}
                   style={styles.closeDetailButton}
                 >
                   <Ionicons name="close" size={24} color="white" />
                 </TouchableOpacity>
-            </View>
-          </View>
-
-          <ScrollView>
-            {selectedWorkout?.exercises.map((exercise, exerciseIndex) => (
-              <View key={exerciseIndex} style={styles.exerciseDetailsCard}>
-                <ThemedText style={styles.exerciseDetailsName}>
-                  {exercise.name}
-                </ThemedText>
-                <View style={styles.detailSetsContainer}>
-                  {exercise.sets.map((set, setIndex) => (
-                    <View key={setIndex} style={styles.detailsCardRow}>
-                      <ThemedText style={styles.detailsSetNumber}>
-                        Set {setIndex + 1}
-                      </ThemedText>
-                      <ThemedText style={styles.detailsCardText}>
-                        {set.weight ? `${set.weight} kg` : "Bodyweight"} ×{" "}
-                        {set.reps} reps
-                      </ThemedText>
-                    </View>
-                  ))}
-                </View>
               </View>
-            ))}
-          </ScrollView>
+            </View>
+
+            <ScrollView>
+              {selectedWorkout?.exercises.map((exercise, exerciseIndex) => (
+                <View key={exerciseIndex} style={styles.exerciseDetailsCard}>
+                  <ThemedText style={styles.exerciseDetailsName}>
+                    {exercise.name}
+                  </ThemedText>
+                  <View style={styles.detailSetsContainer}>
+                    {exercise.sets.map((set, setIndex) => (
+                      <View key={setIndex} style={styles.detailsCardRow}>
+                        <ThemedText style={styles.detailsSetNumber}>
+                          Set {setIndex + 1}
+                        </ThemedText>
+                        <ThemedText style={styles.detailsCardText}>
+                          {set.weight ? `${set.weight} kg` : "Bodyweight"} ×{" "}
+                          {set.reps} reps
+                        </ThemedText>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
     </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -577,9 +622,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   searchButton: {
-    marginBottom: 10, 
-    backgroundColor: "rgba(255,255,255,0.1)", 
-    borderRadius: 8, 
+    marginBottom: 10,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderRadius: 8,
     padding: 8,
   },
   userRow: {
