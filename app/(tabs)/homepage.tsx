@@ -167,6 +167,7 @@ const HomepageScreen: React.FC = () => {
             exercises: data.exercises,
             date: data.date.toDate(),
             duration: data.duration,
+            workoutScore: data.workoutScore || 0,
           });
           
           if (data.userId && !userIdMap[data.userId]) {

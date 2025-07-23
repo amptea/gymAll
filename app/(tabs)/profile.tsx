@@ -261,90 +261,93 @@ export default function ProfileScreen() {
       <Modal
         visible={editProfileModalVisible}
         animationType="slide"
-        transparent={false}
+        transparent={true}
       >
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-        >
-          <ScrollView
-            contentContainerStyle={styles.editModalContainer}
-            keyboardShouldPersistTaps="handled"
-          >
-            <View style={styles.editModalHeader}>
-              <TouchableOpacity
-                onPress={() => setEditProfileModalVisible(false)}
-                style={{ marginRight: 12 }}
-              >
-                <MaterialIcons
-                  name="close"
-                  size={28}
-                  color="rgba(255, 255, 255, 1)"
-                />
-              </TouchableOpacity>
-              <Text style={styles.editModalTitle}>Edit Profile</Text>
-              <View style={{ width: 28, marginLeft: 12 }} />
-            </View>
-
-            <View style={styles.editProfilePictureSection}>
-              <TouchableOpacity
-                style={styles.editProfilePictureContainer}
-                onPress={showImagePickerOptions}
-              >
-                {profilePicture ? (
-                  <Image
-                    source={{ uri: profilePicture }}
-                    style={styles.editProfilePicture}
-                  />
-                ) : (
-                  <View style={styles.editProfilePicturePlaceholder}>
-                    <MaterialIcons
-                      name="person"
-                      size={32}
-                      color="rgba(255, 255, 255, 0.6)"
-                    />
-                  </View>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity onPress={showImagePickerOptions}>
-                <Text style={styles.changePhotoText}>Change Photo</Text>
-              </TouchableOpacity>
-            </View>
-            <View>
-              <Text style={styles.inputLabel}>Name</Text>
-              <TextInput
-                style={styles.editInput}
-                placeholder="Name"
-                placeholderTextColor="rgba(170,170,170,1)"
-                value={name}
-                onChangeText={setName}
-              />
-              <Text style={styles.inputLabel}>Username</Text>
-              <TextInput
-                style={styles.editInput}
-                placeholder="Username"
-                placeholderTextColor="rgba(170,170,170,1)"
-                value={username}
-                onChangeText={setUsername}
-              />
-              <Text style={styles.inputLabel}>Weight (kg)</Text>
-              <TextInput
-                style={styles.editInput}
-                placeholder={weight ? weight.toString() : "Set Weight"}
-                placeholderTextColor="rgba(170,170,170,1)"
-                value={weight ? weight.toString() : ""}
-                keyboardType="numeric"
-                onChangeText={(text) => handleSetWeight(Number(text))}
-              />
-            </View>
-            <TouchableOpacity
-              style={styles.saveButton}
-              onPress={handleSaveProfile}
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <KeyboardAvoidingView
+              style={{ flex: 1 }}
+              behavior={Platform.OS === "ios" ? "padding" : "height"}
             >
-              <Text style={styles.saveButtonText}>Save Changes</Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </KeyboardAvoidingView>
+              <View style={styles.editModalHeader}>
+                <TouchableOpacity
+                  onPress={() => setEditProfileModalVisible(false)}
+                  style={{ marginRight: 12 }}
+                >
+                  <MaterialIcons
+                    name="close"
+                    size={28}
+                    color="rgba(255, 255, 255, 1)"
+                  />
+                </TouchableOpacity>
+                <Text style={styles.editModalTitle}>Edit Profile</Text>
+                <View style={{ width: 28, marginLeft: 12 }} />
+              </View>
+              <ScrollView
+                contentContainerStyle={styles.editModalContainer}
+                keyboardShouldPersistTaps="handled"
+              >
+                <View style={styles.editProfilePictureSection}>
+                  <TouchableOpacity
+                    style={styles.editProfilePictureContainer}
+                    onPress={showImagePickerOptions}
+                  >
+                    {profilePicture ? (
+                      <Image
+                        source={{ uri: profilePicture }}
+                        style={styles.editProfilePicture}
+                      />
+                    ) : (
+                      <View style={styles.editProfilePicturePlaceholder}>
+                        <MaterialIcons
+                          name="person"
+                          size={32}
+                          color="rgba(255, 255, 255, 0.6)"
+                        />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={showImagePickerOptions}>
+                    <Text style={styles.changePhotoText}>Change Photo</Text>
+                  </TouchableOpacity>
+                </View>
+                <View>
+                  <Text style={styles.inputLabel}>Name</Text>
+                  <TextInput
+                    style={styles.editInput}
+                    placeholder="Name"
+                    placeholderTextColor="rgba(170,170,170,1)"
+                    value={name}
+                    onChangeText={setName}
+                  />
+                  <Text style={styles.inputLabel}>Username</Text>
+                  <TextInput
+                    style={styles.editInput}
+                    placeholder="Username"
+                    placeholderTextColor="rgba(170,170,170,1)"
+                    value={username}
+                    onChangeText={setUsername}
+                  />
+                  <Text style={styles.inputLabel}>Weight (kg)</Text>
+                  <TextInput
+                    style={styles.editInput}
+                    placeholder={weight ? weight.toString() : "Set Weight"}
+                    placeholderTextColor="rgba(170,170,170,1)"
+                    value={weight ? weight.toString() : ""}
+                    keyboardType="numeric"
+                    onChangeText={(text) => handleSetWeight(Number(text))}
+                  />
+                </View>
+                <TouchableOpacity
+                  style={styles.saveButton}
+                  onPress={handleSaveProfile}
+                >
+                  <Text style={styles.saveButtonText}>Save Changes</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </KeyboardAvoidingView>
+          </View>
+        </View>
       </Modal>
 
       <Modal
@@ -358,25 +361,24 @@ export default function ProfileScreen() {
               style={{ flex: 1 }}
               behavior={Platform.OS === "ios" ? "padding" : "height"}
             >
+              <View style={styles.statisticsModalHeader}>
+                <TouchableOpacity
+                  onPress={() => setStatisticsModalVisible(false)}
+                  style={{ marginRight: 12 }}
+                >
+                  <MaterialIcons
+                    name="close"
+                    size={28}
+                    color="rgba(255, 255, 255, 1)"
+                  />
+                </TouchableOpacity>
+                <Text style={styles.statisticsModalTitle}>Statistics</Text>
+                <View style={{ width: 28, marginLeft: 12 }} />
+              </View>
               <ScrollView
                 contentContainerStyle={styles.statisticsModalContainer}
                 keyboardShouldPersistTaps="handled"
               >
-                <View style={styles.statisticsModalHeader}>
-                  <TouchableOpacity
-                    onPress={() => setStatisticsModalVisible(false)}
-                    style={{ marginRight: 12 }}
-                  >
-                    <MaterialIcons
-                      name="close"
-                      size={28}
-                      color="rgba(255, 255, 255, 1)"
-                    />
-                  </TouchableOpacity>
-                  <Text style={styles.statisticsModalTitle}>Statistics</Text>
-                  <View style={{ width: 28, marginLeft: 12 }} />
-                </View>
-
                 <View style={styles.statisticsContent}>
                   {loading ? (
                     <Text style={styles.statisticsText}>
@@ -412,13 +414,49 @@ export default function ProfileScreen() {
 
                       <View style={styles.statisticCard}>
                         <Text style={styles.statisticTitle}>
-                          Average Weight
+                          Average Weight Lifted
                         </Text>
                         <Text style={styles.statisticValue}>
                           {statistics.averageWeight} kg
                         </Text>
                         <Text style={styles.statisticDescription}>
                           Per workout session
+                        </Text>
+                      </View>
+
+                      <View style={styles.statisticCard}>
+                        <Text style={styles.statisticTitle}>
+                          Average No. of Reps
+                        </Text>
+                        <Text style={styles.statisticValue}>
+                          {statistics.averageReps} reps
+                        </Text>
+                        <Text style={styles.statisticDescription}>
+                          Per workout session
+                        </Text>
+                      </View>
+
+                      <View style={styles.statisticCard}>
+                        <Text style={styles.statisticTitle}>
+                          Current Workout Streak
+                        </Text>
+                        <Text style={styles.statisticValue}>
+                          {statistics.currentWorkoutStreak} days
+                        </Text>
+                        <Text style={styles.statisticDescription}>
+                          Your current workout streak! Keep it up!
+                        </Text>
+                      </View>
+
+                      <View style={styles.statisticCard}>
+                        <Text style={styles.statisticTitle}>
+                          Longest Workout Streak
+                        </Text>
+                        <Text style={styles.statisticValue}>
+                          {statistics.longestWorkoutStreak} days
+                        </Text>
+                        <Text style={styles.statisticDescription}>
+                          Longest workout streak you've ever had!
                         </Text>
                       </View>
                     </>
@@ -436,6 +474,7 @@ export default function ProfileScreen() {
         transparent={false}
       >
         <SafeAreaView style={styles.leaderboardContainer}>
+          <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
           <View style={styles.leaderboardHeaderRow}>
             <View style={styles.backButtonIcon}>
               <TouchableOpacity
@@ -600,6 +639,7 @@ export default function ProfileScreen() {
               );
             })}
           </View>
+        </ScrollView>
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
@@ -924,8 +964,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "rgba(0,0,0,1)",
     padding: 10,
-    marginBottom: -40,
-    borderRadius: 30,
   },
   topTenCard: {
     backgroundColor: "rgba(44, 44, 44, 0.9)",

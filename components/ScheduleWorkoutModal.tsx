@@ -4,6 +4,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { addDoc, collection } from "firebase/firestore";
 import { useEffect, useState } from 'react';
 import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 
 interface ScheduleWorkoutModalProps {
   isVisible: boolean;
@@ -185,8 +186,14 @@ const ScheduleWorkoutModal: React.FC<ScheduleWorkoutModalProps> =
     >
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.modalLayout} onPress={e => e.stopPropagation()}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <TouchableOpacity onPress={onClose} style={{ padding: 4 }}>
+              <MaterialIcons name="close" size={28} color="#fff" />
+            </TouchableOpacity>
+            <Text style={[styles.textHeader, { flex: 1, textAlign: 'center', marginBottom: 0 }]}>Schedule New Workout</Text>
+            <View style={{ width: 28 }} />
+          </View>
           <ScrollView>
-            <Text style={styles.textHeader}>Schedule New Workout</Text>
             <View style={styles.inputContainer}>
               <Text style={styles.subheader}>Workout Title
                 <Text style={styles.requiredFields}>*</Text>
