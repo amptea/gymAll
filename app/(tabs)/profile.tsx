@@ -28,6 +28,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import EditProfileModal from "@/components/EditProfileModal";
+import StatisticsModal from "@/components/StatisticsModal";
 
 export default function ProfileScreen() {
   const { user } = useAuth();
@@ -258,215 +260,26 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      <Modal
+      <EditProfileModal
         visible={editProfileModalVisible}
-        animationType="slide"
-        transparent={true}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <KeyboardAvoidingView
-              style={{ flex: 1 }}
-              behavior={Platform.OS === "ios" ? "padding" : "height"}
-            >
-              <View style={styles.editModalHeader}>
-                <TouchableOpacity
-                  onPress={() => setEditProfileModalVisible(false)}
-                  style={{ marginRight: 12 }}
-                >
-                  <MaterialIcons
-                    name="close"
-                    size={28}
-                    color="rgba(255, 255, 255, 1)"
-                  />
-                </TouchableOpacity>
-                <Text style={styles.editModalTitle}>Edit Profile</Text>
-                <View style={{ width: 28, marginLeft: 12 }} />
-              </View>
-              <ScrollView
-                contentContainerStyle={styles.editModalContainer}
-                keyboardShouldPersistTaps="handled"
-              >
-                <View style={styles.editProfilePictureSection}>
-                  <TouchableOpacity
-                    style={styles.editProfilePictureContainer}
-                    onPress={showImagePickerOptions}
-                  >
-                    {profilePicture ? (
-                      <Image
-                        source={{ uri: profilePicture }}
-                        style={styles.editProfilePicture}
-                      />
-                    ) : (
-                      <View style={styles.editProfilePicturePlaceholder}>
-                        <MaterialIcons
-                          name="person"
-                          size={32}
-                          color="rgba(255, 255, 255, 0.6)"
-                        />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={showImagePickerOptions}>
-                    <Text style={styles.changePhotoText}>Change Photo</Text>
-                  </TouchableOpacity>
-                </View>
-                <View>
-                  <Text style={styles.inputLabel}>Name</Text>
-                  <TextInput
-                    style={styles.editInput}
-                    placeholder="Name"
-                    placeholderTextColor="rgba(170,170,170,1)"
-                    value={name}
-                    onChangeText={setName}
-                  />
-                  <Text style={styles.inputLabel}>Username</Text>
-                  <TextInput
-                    style={styles.editInput}
-                    placeholder="Username"
-                    placeholderTextColor="rgba(170,170,170,1)"
-                    value={username}
-                    onChangeText={setUsername}
-                  />
-                  <Text style={styles.inputLabel}>Weight (kg)</Text>
-                  <TextInput
-                    style={styles.editInput}
-                    placeholder={weight ? weight.toString() : "Set Weight"}
-                    placeholderTextColor="rgba(170,170,170,1)"
-                    value={weight ? weight.toString() : ""}
-                    keyboardType="numeric"
-                    onChangeText={(text) => handleSetWeight(Number(text))}
-                  />
-                </View>
-                <TouchableOpacity
-                  style={styles.saveButton}
-                  onPress={handleSaveProfile}
-                >
-                  <Text style={styles.saveButtonText}>Save Changes</Text>
-                </TouchableOpacity>
-              </ScrollView>
-            </KeyboardAvoidingView>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal
+        onClose={() => setEditProfileModalVisible(false)}
+        profilePicture={profilePicture}
+        showImagePickerOptions={showImagePickerOptions}
+        name={name}
+        setName={setName}
+        username={username}
+        setUsername={setUsername}
+        weight={weight}
+        setWeight={handleSetWeight}
+        onSave={handleSaveProfile}
+      />
+      <StatisticsModal
         visible={statisticsModalVisible}
-        animationType="slide"
-        transparent={true}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <KeyboardAvoidingView
-              style={{ flex: 1 }}
-              behavior={Platform.OS === "ios" ? "padding" : "height"}
-            >
-              <View style={styles.statisticsModalHeader}>
-                <TouchableOpacity
-                  onPress={() => setStatisticsModalVisible(false)}
-                  style={{ marginRight: 12 }}
-                >
-                  <MaterialIcons
-                    name="close"
-                    size={28}
-                    color="rgba(255, 255, 255, 1)"
-                  />
-                </TouchableOpacity>
-                <Text style={styles.statisticsModalTitle}>Statistics</Text>
-                <View style={{ width: 28, marginLeft: 12 }} />
-              </View>
-              <ScrollView
-                contentContainerStyle={styles.statisticsModalContainer}
-                keyboardShouldPersistTaps="handled"
-              >
-                <View style={styles.statisticsContent}>
-                  {loading ? (
-                    <Text style={styles.statisticsText}>
-                      Loading statistics...
-                    </Text>
-                  ) : error ? (
-                    <Text style={styles.statisticsText}>Error: {error}</Text>
-                  ) : (
-                    <>
-                      <View style={styles.statisticCard}>
-                        <Text style={styles.statisticTitle}>
-                          Lifetime Weight Lifted
-                        </Text>
-                        <Text style={styles.statisticValue}>
-                          {statistics.totalWeight} kg
-                        </Text>
-                        <Text style={styles.statisticDescription}>
-                          Total weight across all workouts
-                        </Text>
-                      </View>
-
-                      <View style={styles.statisticCard}>
-                        <Text style={styles.statisticTitle}>
-                          Total Workouts
-                        </Text>
-                        <Text style={styles.statisticValue}>
-                          {statistics.totalWorkouts}
-                        </Text>
-                        <Text style={styles.statisticDescription}>
-                          Workouts completed
-                        </Text>
-                      </View>
-
-                      <View style={styles.statisticCard}>
-                        <Text style={styles.statisticTitle}>
-                          Average Weight Lifted
-                        </Text>
-                        <Text style={styles.statisticValue}>
-                          {statistics.averageWeight} kg
-                        </Text>
-                        <Text style={styles.statisticDescription}>
-                          Per workout session
-                        </Text>
-                      </View>
-
-                      <View style={styles.statisticCard}>
-                        <Text style={styles.statisticTitle}>
-                          Average No. of Reps
-                        </Text>
-                        <Text style={styles.statisticValue}>
-                          {statistics.averageReps} reps
-                        </Text>
-                        <Text style={styles.statisticDescription}>
-                          Per workout session
-                        </Text>
-                      </View>
-
-                      <View style={styles.statisticCard}>
-                        <Text style={styles.statisticTitle}>
-                          Current Workout Streak
-                        </Text>
-                        <Text style={styles.statisticValue}>
-                          {statistics.currentWorkoutStreak} days
-                        </Text>
-                        <Text style={styles.statisticDescription}>
-                          Your current workout streak! Keep it up!
-                        </Text>
-                      </View>
-
-                      <View style={styles.statisticCard}>
-                        <Text style={styles.statisticTitle}>
-                          Longest Workout Streak
-                        </Text>
-                        <Text style={styles.statisticValue}>
-                          {statistics.longestWorkoutStreak} days
-                        </Text>
-                        <Text style={styles.statisticDescription}>
-                          Longest workout streak you've ever had!
-                        </Text>
-                      </View>
-                    </>
-                  )}
-                </View>
-              </ScrollView>
-            </KeyboardAvoidingView>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setStatisticsModalVisible(false)}
+        statistics={statistics}
+        loading={loading}
+        error={error}
+      />
 
       <Modal
         visible={leaderboardModalVisible}
@@ -737,156 +550,6 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     paddingLeft: 20,
   },
-  editModalContainer: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,1)",
-    justifyContent: "center",
-    padding: 24,
-  },
-  editModalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    width: "100%",
-    marginBottom: 20,
-    marginTop: 10,
-  },
-  editModalTitle: {
-    color: "rgba(255, 255, 255, 1)",
-    fontSize: 24,
-    fontWeight: "bold",
-  },
-  editProfilePictureSection: {
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  editProfilePictureContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: "rgba(34, 34, 34, 1)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 8,
-    borderWidth: 2,
-    borderColor: "rgba(51, 51, 51, 1)",
-  },
-  editProfilePicture: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-  },
-  editProfilePicturePlaceholder: {
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  changePhotoText: {
-    color: "rgba(255, 154, 2, 1)",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  editInput: {
-    width: "100%",
-    height: 48,
-    backgroundColor: "rgba(34, 34, 34, 1)",
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "rgba(51, 51, 51, 1)",
-    color: "rgba(255, 255, 255, 1)",
-    paddingRight: 40,
-  },
-  saveButton: {
-    width: "100%",
-    backgroundColor: "rgba(255, 154, 2, 1)",
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: "center",
-    marginTop: 8,
-  },
-  saveButtonText: {
-    color: "rgb(0, 0, 0)",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  statisticsModalContainer: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,1)",
-    justifyContent: "center",
-    padding: 24,
-  },
-  statisticsModalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    width: "100%",
-    marginBottom: 20,
-    marginTop: 10,
-  },
-  statisticsModalTitle: {
-    color: "rgba(255, 255, 255, 1)",
-    fontSize: 24,
-    fontWeight: "bold",
-  },
-  statisticsContent: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  statisticsText: {
-    color: "rgba(255, 255, 255, 1)",
-    fontSize: 18,
-    textAlign: "center",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContent: {
-    width: "100%",
-    height: "80%",
-    backgroundColor: "rgba(0, 0, 0, 1)",
-    borderRadius: 12,
-    overflow: "hidden",
-  },
-  statisticCard: {
-    backgroundColor: "rgba(34, 34, 34, 1)",
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "rgba(51, 51, 51, 1)",
-    alignItems: "center",
-    width: "100%",
-    height: 100,
-    justifyContent: "flex-start",
-  },
-  statisticTitle: {
-    color: "rgba(255, 255, 255, 1)",
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  statisticValue: {
-    color: "rgba(255, 154, 2, 1)",
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 4,
-  },
-  statisticDescription: {
-    color: "rgba(170, 170, 170, 1)",
-    fontSize: 12,
-    textAlign: "left",
-  },
-  inputLabel: {
-    color: "rgba(255, 255, 255, 0.7)",
-    fontSize: 14,
-    marginBottom: 8,
-    marginLeft: 4,
-  },
   leaderboardContainer: {
     flex: 1,
     backgroundColor: "rgba(47, 52, 55, 1)",
@@ -911,7 +574,6 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   leaderboardHeaderRow: {
-    position: "relative",
     flexDirection: "row",
     paddingTop: 14,
     alignContent: "center",
@@ -1001,7 +663,6 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   topTenDetailsContainer: {
-    justifyContent: "space-between",
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
