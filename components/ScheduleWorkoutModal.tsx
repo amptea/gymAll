@@ -5,12 +5,14 @@ import { addDoc, collection } from "firebase/firestore";
 import { useEffect, useState } from 'react';
 import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import FriendSelectorModal from './FriendSelectorScheduleModal';
 
 interface ScheduleWorkoutModalProps {
   isVisible: boolean;
   onClose: () => void;
   selectedDate: string;
   onWorkoutScheduled?: () => void;
+  friends: { uid: string; displayName: string }[]; 
 }
 
 interface Schedule {
@@ -21,17 +23,20 @@ interface Schedule {
   startTime: number,
   duration: number,
   notes: string,
+  participants: string[], 
 }
 
 const ScheduleWorkoutModal: React.FC<ScheduleWorkoutModalProps> = 
-({ isVisible, onClose, selectedDate, onWorkoutScheduled }) => {
+({ isVisible, onClose, selectedDate, onWorkoutScheduled, friends }) => {
   const [scheduleDetails, setScheduleDetails] = useState({
       title: '',
       date: selectedDate,
       startTime: '',
       duration: '',
       notes: '',
-    });
+  });
+  const [selectedFriends, setSelectedFriends] = useState<string[]>([]); 
+  const [friendSelectorVisible, setFriendSelectorVisible] = useState(false);
 
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [date, setDate] = useState<Date | null>(null);
@@ -53,6 +58,7 @@ const ScheduleWorkoutModal: React.FC<ScheduleWorkoutModalProps> =
         duration: '',
         notes: '',
       });
+      setSelectedFriends([]); 
     }
   }, [isVisible, selectedDate]);
 
@@ -118,6 +124,7 @@ const ScheduleWorkoutModal: React.FC<ScheduleWorkoutModalProps> =
     }
     
     onClose();
+    const participants = [user?.uid, ...selectedFriends.filter(uid => uid !== user?.uid)].filter(Boolean) as string[]; // always include self, filter out undefined
     const newSchedule: Schedule = {
       userId: user?.uid || '',
       id: '',
@@ -126,6 +133,7 @@ const ScheduleWorkoutModal: React.FC<ScheduleWorkoutModalProps> =
       startTime: parseInt(scheduleDetails.startTime),
       duration: parseInt(scheduleDetails.duration),
       notes: scheduleDetails.notes,
+      participants,
     };
     const scheduleId = await saveScheduleToFirestore(newSchedule);
     if (scheduleId) {
@@ -168,6 +176,7 @@ const ScheduleWorkoutModal: React.FC<ScheduleWorkoutModalProps> =
         startTime: schedule.startTime,
         duration: schedule.duration,
         notes: schedule.notes,
+        participants: schedule.participants, 
       }
       const scheduleRef = collection(db, "schedule");
       const scheduleDoc = await addDoc(scheduleRef, scheduleData);
@@ -242,7 +251,31 @@ const ScheduleWorkoutModal: React.FC<ScheduleWorkoutModalProps> =
                 </View>
               )}
             </View>
-
+            <View style={styles.inputContainer}>
+              <Text style={styles.subheader}>Participants</Text>
+              <TouchableOpacity
+                style={{
+                  backgroundColor: '#333',
+                  borderRadius: 8,
+                  padding: 12,
+                  marginBottom: 8,
+                }}
+                onPress={() => setFriendSelectorVisible(true)}
+              >
+                <Text style={{ color: '#fff' }}>
+                  {selectedFriends.length === 0
+                    ? 'Select friends'
+                    : friends.filter(friend => selectedFriends.includes(friend.uid)).map(friend => friend.displayName).join(', ')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <FriendSelectorModal
+              visible={friendSelectorVisible}
+              onClose={() => setFriendSelectorVisible(false)}
+              friends={friends}
+              selectedFriends={selectedFriends}
+              onSelect={setSelectedFriends}
+            />
             <View style={styles.inputContainer}>
               <Text style={styles.subheader}>Start Time
                 <Text style={styles.requiredFields}>*</Text>
