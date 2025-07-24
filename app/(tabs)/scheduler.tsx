@@ -1,7 +1,7 @@
 import ScheduleWorkoutModal from "@/components/ScheduleWorkoutModal";
 import { db } from "@/FirebaseConfig";
 import { useAuth } from "@/hooks/useAuth";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import {
   Alert,
@@ -22,6 +22,7 @@ interface Schedule {
   startTime: number,
   duration: number,
   notes: string,
+  participants: string[],
 }
 
 export default function SchedulerScreen() {
@@ -30,8 +31,8 @@ export default function SchedulerScreen() {
   const [schedule, setSchedule] = useState<Schedule[] | null>(null);
   const [scheduleForDate, setScheduleForDate] = useState<Schedule[] | null>(null);
   const { user } = useAuth();
+  const [friends, setFriends] = useState<{ uid: string; displayName: string }[]>([]);
 
-  // Get current date in local timezone
   const getCurrentDate = () => {
     const now = new Date();
     const year = now.getFullYear();
@@ -56,6 +57,41 @@ export default function SchedulerScreen() {
       setSelected("");
     };
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      loadFriendsFromFirestore();
+    }
+  }, [user]);
+
+  const loadFriendsFromFirestore = async () => {
+    if (!user) return;
+    try {
+      const currentUserRef = doc(db, 'users', user.uid);
+      const currentUserDoc = await getDoc(currentUserRef);
+      if (currentUserDoc.exists()) {
+        const currentUserData = currentUserDoc.data();
+        if (currentUserData.friends && Array.isArray(currentUserData.friends)) {
+          const friendDocs = await Promise.all(
+            currentUserData.friends.map(async (friendUid: string) => {
+              const friendRef = doc(db, 'users', friendUid);
+              const friendDoc = await getDoc(friendRef);
+              if (friendDoc.exists()) {
+                const friendData = friendDoc.data();
+                return { uid: friendUid, displayName: friendData.name || friendData.username || 'null' };
+              }
+              return null;
+            })
+          );
+          setFriends(friendDocs.filter(Boolean) as { uid: string; displayName: string }[]);
+        } else {
+          setFriends([]);
+        }
+      }
+    } catch (error) {
+      setFriends([]);
+    }
+  };
 
   const getScheduleForDate = async (selectedDate: string) => {
     if (!user) {
@@ -100,6 +136,7 @@ export default function SchedulerScreen() {
             startTime: data.startTime,
             duration: data.duration,
             notes: data.notes,
+            participants: data.participants,
           });
         }
       })
@@ -233,6 +270,7 @@ export default function SchedulerScreen() {
         onClose={scheduleButtonClosed}
         selectedDate={selected}
         onWorkoutScheduled={handleNewWorkout}
+        friends={friends}
       />
     </View>
   );
