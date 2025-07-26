@@ -17,4 +17,11 @@ export interface SavedWorkout {
     workoutScore: number;
 }
 
+export interface SavedRoutine {
+    userId?: string;
+    id?: string;
+    exercises: ExerciseEntry[];
+    title: string;
+}
+
 

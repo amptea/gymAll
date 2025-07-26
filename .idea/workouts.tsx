@@ -2,7 +2,7 @@ import workoutList from "@/assets/workoutList/exercises";
 import AddExerciseModal from "@/components/AddExerciseModal";
 import { db } from "@/FirebaseConfig";
 import { useAuth } from "@/hooks/useAuth";
-import { ExerciseEntry, SavedRoutine, SavedWorkout } from "@/types/workout";
+import { ExerciseEntry, SavedWorkout } from "@/types/workout";
 import { Ionicons } from "@expo/vector-icons";
 import {
   addDoc,
@@ -51,22 +51,12 @@ const WorkoutScreen: React.FC = () => {
   const timerRef = useRef<number | null>(null);
   const [selectedExercise, setSelectedExercise] = useState<string | null>(null);
   const [addRoutinePage, setAddRoutinePage] = useState(false);
-  const [savedRoutines, setSavedRoutines] = useState<SavedRoutine[]>([]);
-  const [currentRoutineEdited, setCurrentRoutineEdited] =
-    useState<SavedRoutine | null>(null);
-  const [selectedRoutine, setSelectedRoutine] = useState<SavedRoutine | null>(
-    null
-  );
-  const [routineStartedPage, setRoutineStartedPage] = useState(false);
-  const [routineTitle, setRoutineTitle] = useState("");
-  const [editRoutinePage, setEditRoutinePage] = useState(false);
-  const [routineDetailPage, setRoutineDetailPage] = useState(false);
+  const [savedRoutine, setSavedRoutines] = useState<SavedWorkout[]>([]);
 
   useEffect(() => {
     if (user) {
       loadWorkoutsFromFirestore();
       loadUserInfo();
-      loadRoutinesFromFirestore();
     }
   }, [user]);
 
@@ -130,31 +120,6 @@ const WorkoutScreen: React.FC = () => {
     }
   };
 
-  const finishRoutine = async () => {
-    if (addedExercises.length > 0 && user) {
-      try {
-        const newRoutine: SavedRoutine = {
-          userId: user.uid,
-          exercises: addedExercises,
-          title: routineTitle,
-        };
-
-        const routineId = await saveRoutineToFirestore(newRoutine);
-
-        if (routineId) {
-          const savedRoutines = { ...newRoutine, id: routineId };
-          setSavedRoutines((previous) => [savedRoutines, ...previous]);
-        }
-
-        setAddedExercises([]);
-        setRoutineTitle("");
-        setRoutineStartedPage(false);
-      } catch (error) {
-        Alert.alert("Error", "Workout not saved successfully");
-      }
-    }
-  };
-
   const formatDate = (date: Date) => {
     const today = new Date();
     const yesterday = new Date(today);
@@ -204,25 +169,12 @@ const WorkoutScreen: React.FC = () => {
     setWorkoutDetailPage(true);
   };
 
-  const openRoutineDetail = (routine: SavedRoutine) => {
-    setSelectedRoutine(routine);
-    setRoutineDetailPage(true);
-  };
-
   const startEditWorkout = (workout: SavedWorkout) => {
     setCurrentWorkoutEdited(workout);
     setAddedExercisesCache(addedExercises);
     setAddedExercises([...workout.exercises]);
     setEditWorkoutPage(true);
     setWorkoutDetailPage(false);
-  };
-
-  const startEditRoutine = (routine: SavedRoutine) => {
-    setCurrentRoutineEdited(routine);
-    setAddedExercisesCache(addedExercises);
-    setAddedExercises([...routine.exercises]);
-    setEditRoutinePage(true);
-    setRoutineDetailPage(false);
   };
 
   const saveEditedWorkout = async () => {
@@ -254,48 +206,10 @@ const WorkoutScreen: React.FC = () => {
     }
   };
 
-  const saveEditedRoutine = async () => {
-    if (currentRoutineEdited && addedExercises.length > 0) {
-      try {
-        const updatedRoutine: SavedRoutine = {
-          ...currentRoutineEdited,
-          exercises: addedExercises,
-          title: routineTitle,
-        };
-
-        if (currentRoutineEdited.id) {
-          await updateRoutineInFirestore(
-            currentRoutineEdited.id,
-            updatedRoutine
-          );
-        }
-        setSavedRoutines((previous) =>
-          previous.map((routine) =>
-            routine === currentRoutineEdited ? updatedRoutine : routine
-          )
-        );
-
-        setCurrentRoutineEdited(null);
-        setAddedExercises(addedExercisesCache);
-        setRoutineTitle("");
-        setEditRoutinePage(false);
-      } catch (error) {
-        Alert.alert("Error", "Workout not updated successfully");
-      }
-    }
-  };
-
   const cancelEditWorkout = () => {
     setCurrentWorkoutEdited(null);
     setAddedExercises(addedExercisesCache);
     setEditWorkoutPage(false);
-  };
-
-  const cancelEditRoutine = () => {
-    setCurrentRoutineEdited(null);
-    setAddedExercises(addedExercisesCache);
-    setRoutineTitle("");
-    setEditRoutinePage(false);
   };
 
   const removeExerciseFromEdit = (exerciseIndex: number) => {
@@ -309,17 +223,6 @@ const WorkoutScreen: React.FC = () => {
       await deleteWorkoutFromFirestore(workoutId);
       setSavedWorkouts((previous) =>
         previous.filter((workout) => workout.id !== workoutId)
-      );
-    } catch (error) {
-      Alert.alert("Error", "Failed to delete workout");
-    }
-  };
-
-  const deleteRoutine = async (routineId: string) => {
-    try {
-      await deleteRoutineFromFirestore(routineId);
-      setSavedRoutines((previous) =>
-        previous.filter((routine) => routine.id !== routineId)
       );
     } catch (error) {
       Alert.alert("Error", "Failed to delete workout");
@@ -355,33 +258,6 @@ const WorkoutScreen: React.FC = () => {
     }
   };
 
-  const loadRoutinesFromFirestore = async () => {
-    if (!user) {
-      Alert.alert("Error", "User not found");
-      return;
-    }
-    try {
-      const routineRef = collection(db, "routines");
-      const routineList = await getDocs(routineRef);
-      const routines: SavedRoutine[] = [];
-
-      routineList.forEach((doc) => {
-        const data = doc.data();
-        if (data.userId === user.uid) {
-          routines.push({
-            userId: data.userId,
-            id: doc.id,
-            exercises: data.exercises,
-            title: data.title,
-          });
-        }
-      });
-      setSavedRoutines(routines);
-    } catch (error) {
-      Alert.alert("Error", "Failed to load workouts");
-    }
-  };
-
   const saveWorkoutToFirestore = async (workout: SavedWorkout) => {
     if (!user) {
       Alert.alert("Error", "User not found");
@@ -403,27 +279,6 @@ const WorkoutScreen: React.FC = () => {
       saveScore(addedScore);
 
       return workoutsDoc.id;
-    } catch (error) {
-      Alert.alert("Error", "Unable to save workout");
-    }
-  };
-
-  const saveRoutineToFirestore = async (routine: SavedRoutine) => {
-    if (!user) {
-      Alert.alert("Error", "User not found");
-      return;
-    }
-
-    try {
-      const routineData = {
-        userId: user.uid,
-        exercises: routine.exercises,
-        title: routine.title,
-      };
-      const routinesRef = collection(db, "routines");
-      const routinesDoc = await addDoc(routinesRef, routineData);
-
-      return routinesDoc.id;
     } catch (error) {
       Alert.alert("Error", "Unable to save workout");
     }
@@ -459,30 +314,6 @@ const WorkoutScreen: React.FC = () => {
     }
   };
 
-  const updateRoutineInFirestore = async (
-    routineId: string,
-    updatedRoutine: SavedRoutine
-  ) => {
-    if (!user) {
-      Alert.alert("Error", "User not found");
-      return;
-    }
-    try {
-      const routineRef = doc(db, "routines", routineId);
-      const oldRoutineSnapshot = await getDoc(routineRef);
-      const oldRoutineData = oldRoutineSnapshot.exists()
-        ? oldRoutineSnapshot.data()
-        : null;
-
-      await updateDoc(routineRef, {
-        exercises: updatedRoutine.exercises,
-        title: updatedRoutine.title,
-      });
-    } catch (error) {
-      Alert.alert("Error", "Unable to update workout");
-    }
-  };
-
   const deleteWorkoutFromFirestore = async (workoutId: string) => {
     if (!user) {
       Alert.alert("Error", "User not found");
@@ -498,19 +329,6 @@ const WorkoutScreen: React.FC = () => {
         setScore(score - deletedScore);
       }
       await deleteDoc(workoutRef);
-    } catch (error) {
-      Alert.alert("Error", "Unable to delete workout");
-    }
-  };
-
-  const deleteRoutineFromFirestore = async (routineId: string) => {
-    if (!user) {
-      Alert.alert("Error", "User not found");
-      return;
-    }
-    try {
-      const routineRef = doc(db, "routines", routineId);
-      await deleteDoc(routineRef);
     } catch (error) {
       Alert.alert("Error", "Unable to delete workout");
     }
@@ -597,62 +415,89 @@ const WorkoutScreen: React.FC = () => {
           transparent={true}
           animationType="slide"
         >
-          <View style={styles.addRoutineModal}>
-            <View style={styles.addRoutineHeader}>
+          <View style={{ flex: 1, backgroundColor: "#000" }}>
+            <View
+              style={{
+                padding: 50,
+                flexDirection: "row",
+                alignItems: "center",
+              }}
+            >
               <TouchableOpacity onPress={() => setAddRoutinePage(false)}>
-                <Ionicons
-                  name="chevron-back"
-                  size={28}
-                  color="rgba(255, 255, 255, 1)"
-                  style={styles.routineBackButton}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                />
+                <Ionicons name="chevron-back" size={28} color="#fff" />
               </TouchableOpacity>
-              <View style={styles.headerTitleContainer}>
-                <Text style={styles.headerText}>Routines</Text>
-              </View>
+              <Text style={[styles.headerText, { marginLeft: 12 }]}>
+                Saved Routines
+              </Text>
             </View>
 
-            <ScrollView style={styles.savedRoutines}>
-              {savedRoutines.length > 0 ? (
-                <View
-                  style={[
-                    styles.previousWorkoutsSection,
-                    { paddingLeft: 30, paddingRight: 30 },
-                  ]}
-                >
-                  <Text style={styles.subHeader}>My Routines</Text>
-                  <View style={styles.gridContainer}>
-                    {savedRoutines.map((routine, routineIndex) => (
-                      <TouchableOpacity
-                        key={routineIndex}
-                        style={styles.routineCard}
-                        onPress={() => openRoutineDetail(routine)}
-                        activeOpacity={0.7}
-                      >
-                        <View style={styles.routineCardHeader}>
-                          <Text style={styles.routineHeader}>
-                            {routine.title}
+            {/* Saved Workouts ScrollView */}
+            <ScrollView style={{ flex: 1 }}>
+              {savedWorkouts.length > 0 ? (
+                <View style={styles.previousWorkoutsSection}>
+                  <Text style={styles.subHeader}>Previous Workouts</Text>
+                  {savedWorkouts.map((workout, workoutIndex) => (
+                    <TouchableOpacity
+                      key={workoutIndex}
+                      style={styles.workoutCard}
+                      onPress={() => openWorkoutDetail(workout)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.workoutCardHeader}>
+                        <View>
+                          <Text style={styles.workoutDate}>
+                            {formatDate(workout.date)}
                           </Text>
+                          <Text style={styles.workoutTime}>
+                            {formatTime(workout.date)}
+                          </Text>
+                        </View>
+                        <Ionicons
+                          name="chevron-forward"
+                          size={20}
+                          color="rgba(255,255,255,0.4)"
+                        />
+                      </View>
+
+                      <View style={styles.workoutCardBody}>
+                        <View style={styles.workoutStats}>
+                          <View style={styles.statsItem}>
+                            <Text style={styles.statsNumber}>
+                              {workout.exercises.length}
+                            </Text>
+                            <Text style={styles.statsLabel}>exercises</Text>
+                          </View>
+                          <View style={styles.statsItem}>
+                            <Text style={styles.statsNumber}>
+                              {getTotalSets(workout.exercises)}
+                            </Text>
+                            <Text style={styles.statsLabel}>sets</Text>
+                          </View>
+                          {workout.duration && (
+                            <View style={styles.statsItem}>
+                              <Text style={styles.statsNumber}>
+                                {workout.duration}
+                              </Text>
+                              <Text style={styles.statsLabel}>duration</Text>
+                            </View>
+                          )}
                         </View>
 
-                        <View style={styles.workoutCardBody}>
-                          <Text style={styles.exercisePreviewText}>
-                            {routine.exercises
-                              .slice(0, 2)
-                              .map((exercise) => exercise.name)
-                              .join(", ")}
-                            {routine.exercises.length > 2 &&
-                              ` +${routine.exercises.length - 2} more`}
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
+                        <Text style={styles.exercisePreviewText}>
+                          {workout.exercises
+                            .slice(0, 3)
+                            .map((exercise) => exercise.name)
+                            .join(", ")}
+                          {workout.exercises.length > 3 &&
+                            ` +${workout.exercises.length - 3} more`}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
                 </View>
               ) : (
                 <View style={styles.previousWorkoutsSection}>
-                  <Text style={styles.subHeader}>My Routines</Text>
+                  <Text style={styles.subHeader}>Previous Workouts</Text>
                   <View style={styles.emptyStateContainer}>
                     <Ionicons
                       name="barbell-outline"
@@ -660,444 +505,70 @@ const WorkoutScreen: React.FC = () => {
                       color="rgba(255,255,255,0.3)"
                     />
                     <Text style={styles.noWorkoutsText}>
-                      No routines saved yet
+                      No workouts recorded yet
                     </Text>
                     <Text style={styles.noWorkoutsSubText}>
-                      Save your first routine now!
+                      Start your first workout now!
                     </Text>
                   </View>
                 </View>
               )}
             </ScrollView>
 
-            <View style={[styles.workoutButtonSection, { marginTop: 12 }]}>
-              <TouchableOpacity
-                style={styles.startWorkoutButton}
-                onPress={() => {
-                  setRoutineStartedPage(true);
-                }}
-              >
-                <Text style={styles.workoutButtonText}>Add new routine</Text>
-              </TouchableOpacity>
+            {/* Bottom Section – Start or Resume Workout */}
+            <View style={styles.workoutButtonSection}>
+              {startTime && !workoutStartedPage ? (
+                <View style={styles.workoutInProgressContainer}>
+                  <Text style={styles.workoutInProgressText}>
+                    Workout In Progress!
+                  </Text>
+                  <View style={styles.workoutInProgressButtons}>
+                    <TouchableOpacity
+                      style={styles.resumeButton}
+                      onPress={() => setWorkoutStartedPage(true)}
+                    >
+                      <Ionicons
+                        name="play-circle"
+                        size={24}
+                        color="rgba(30, 144, 255, 0.9)"
+                      />
+                      <Text style={styles.resumeButtonText}>Resume</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.discardButton}
+                      onPress={cancelWorkout}
+                    >
+                      <Ionicons
+                        name="trash-bin"
+                        size={24}
+                        color="rgba(230, 25, 25, 0.9)"
+                      />
+                      <Text style={styles.discardButtonText}>Discard</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.startWorkoutButton}
+                  onPress={() => {
+                    setStartTime(new Date());
+                    setElapsedTime(0);
+                    if (timerRef.current) clearInterval(timerRef.current);
+                    timerRef.current = setInterval(() => {
+                      setElapsedTime((prev) => prev + 1);
+                    }, 1000);
+                    setWorkoutStartedPage(false);
+                  }}
+                >
+                  <Text style={styles.workoutButtonText}>Start Workout</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
-
-          <Modal
-            visible={routineStartedPage}
-            animationType="slide"
-            transparent={false}
-          >
-            <SafeAreaView style={[styles.workoutProgressOverlay]}>
-              <View style={styles.workoutProgressContent}>
-                <View style={styles.workoutIconBox}>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setRoutineStartedPage(false), setAddedExercises([]);
-                    }}
-                  >
-                    <Ionicons
-                      name="chevron-down"
-                      size={28}
-                      color="rgb(255, 255, 255)"
-                    />
-                  </TouchableOpacity>
-                  <View style={styles.routineTitleContainer}>
-                    <Ionicons name="pencil" size={18} color="#aaa" />
-                    <TextInput
-                      placeholder="Enter Routine Title"
-                      placeholderTextColor="rgba(170,170,170,1)"
-                      value={routineTitle}
-                      onChangeText={(text) => {
-                        setRoutineTitle(text);
-                      }}
-                      style={styles.routineTitleInput}
-                    />
-                  </View>
-
-                  <TouchableOpacity
-                    style={styles.finishWorkoutButton}
-                    onPress={finishRoutine}
-                  >
-                    <Text style={styles.workoutButtonText}>Finish</Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.scrollableContent}>
-                  <ScrollView showsVerticalScrollIndicator={false}>
-                    {addedExercises.length === 0 ? (
-                      <Text style={styles.noExercisesText}>
-                        No exercises added.
-                      </Text>
-                    ) : (
-                      addedExercises.map((exercise, exerciseIndex) => (
-                        <View key={exerciseIndex} style={styles.addedExercises}>
-                          <View style={styles.editExerciseHeader}>
-                            <Text style={styles.exercisesAddedText}>
-                              {exercise.name}
-                            </Text>
-                            <TouchableOpacity
-                              onPress={() =>
-                                removeExerciseFromEdit(exerciseIndex)
-                              }
-                              style={styles.removeExerciseButton}
-                            >
-                              <Ionicons
-                                name="trash-outline"
-                                size={20}
-                                color="#ff4c4c"
-                              />
-                            </TouchableOpacity>
-                          </View>
-                          {exercise.sets.map((set, setIndex) => (
-                            <View
-                              key={setIndex}
-                              style={{
-                                flexDirection: "row",
-                                justifyContent: "space-between",
-                                marginBottom: 8,
-                              }}
-                            >
-                              <TextInput
-                                placeholder="Weight"
-                                placeholderTextColor="rgba(170,170,170,1)"
-                                value={
-                                  set.weight === 0 ? "" : set.weight.toString()
-                                }
-                                onChangeText={(text) => {
-                                  const updated = [...addedExercises];
-                                  updated[exerciseIndex].sets[setIndex].weight =
-                                    Number(text);
-                                  setAddedExercises(updated);
-                                }}
-                                style={styles.setInput}
-                                keyboardType="numeric"
-                              />
-                              <TextInput
-                                placeholder="Reps"
-                                placeholderTextColor="rgba(170,170,170,1)"
-                                value={
-                                  set.reps === 0 ? "" : set.reps.toString()
-                                }
-                                onChangeText={(text) => {
-                                  const updated = [...addedExercises];
-                                  updated[exerciseIndex].sets[setIndex].reps =
-                                    Number(text);
-                                  setAddedExercises(updated);
-                                }}
-                                style={styles.setInput}
-                                keyboardType="numeric"
-                              />
-                              <TouchableOpacity
-                                onPress={() => {
-                                  const updated = [...addedExercises];
-                                  updated[exerciseIndex].sets.splice(
-                                    setIndex,
-                                    1
-                                  );
-                                  setAddedExercises(updated);
-                                }}
-                              >
-                                <Ionicons
-                                  name="close"
-                                  size={32}
-                                  color="red"
-                                  style={{ paddingRight: 2 }}
-                                />
-                              </TouchableOpacity>
-                            </View>
-                          ))}
-                          <TouchableOpacity
-                            onPress={() => {
-                              const updated = [...addedExercises];
-                              updated[exerciseIndex].sets.push({
-                                weight: 0,
-                                reps: 0,
-                              });
-                              setAddedExercises(updated);
-                            }}
-                          >
-                            <Text style={styles.addSetText}>+ Add Set</Text>
-                          </TouchableOpacity>
-                        </View>
-                      ))
-                    )}
-                  </ScrollView>
-                </View>
-              </View>
-
-              <View style={styles.fixedButtonsContainer}>
-                <TouchableOpacity
-                  style={styles.routineAddExerciseButton}
-                  onPress={() => setAddExercisePage(true)}
-                >
-                  <Text style={styles.workoutButtonText}>Add Exercise</Text>
-                </TouchableOpacity>
-              </View>
-            </SafeAreaView>
-
-            <AddExerciseModal
-              visible={addExercisePage}
-              onClose={() => {
-                setAddExercisePage(false);
-                setSearchText("");
-              }}
-              searchText={searchText}
-              setSearchText={setSearchText}
-              filteredWorkouts={filteredWorkouts}
-              addedExercises={addedExercises}
-              setAddedExercises={setAddedExercises}
-              exerciseAlreadyAdded={exerciseAlreadyAdded}
-              onExerciseClicked={(exercise) => setSelectedExercise(exercise)}
-              selected={selectedExercise}
-              styles={styles}
-            />
-          </Modal>
-
-          <Modal
-            visible={routineDetailPage}
-            animationType="slide"
-            transparent={true}
-          >
-            <View style={styles.workoutDetailOverlay}>
-              <View style={styles.workoutDetailContent}>
-                <View style={styles.workoutDetailHeader}>
-                  <View>
-                    <Text
-                      style={[
-                        styles.workoutDetailTitle,
-                        { paddingLeft: 14, paddingTop: 5 },
-                      ]}
-                    >
-                      {selectedRoutine?.title}
-                    </Text>
-                  </View>
-                  <View style={styles.workoutDetailActions}>
-                    <TouchableOpacity
-                      onPress={() =>
-                        Alert.alert(
-                          "Delete Workout",
-                          "Are you sure you want to delete this workout?",
-                          [
-                            {
-                              text: "Cancel",
-                            },
-                            {
-                              text: "Delete",
-                              onPress: async () => {
-                                if (selectedRoutine?.id) {
-                                  await deleteRoutine(selectedRoutine.id);
-                                  setRoutineDetailPage(false);
-                                }
-                              },
-                            },
-                          ]
-                        )
-                      }
-                      style={styles.deleteWorkoutButton}
-                    >
-                      <Ionicons name="trash-outline" size={20} color="white" />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() =>
-                        selectedRoutine && startEditRoutine(selectedRoutine)
-                      }
-                      style={styles.editWorkoutButton}
-                    >
-                      <Ionicons name="create-outline" size={20} color="white" />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => setRoutineDetailPage(false)}
-                      style={styles.editWorkoutButton}
-                    >
-                      <Ionicons name="close" size={24} color="white" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                <ScrollView>
-                  {selectedRoutine?.exercises.map((exercise, exerciseIndex) => (
-                    <View
-                      key={exerciseIndex}
-                      style={styles.exerciseDetailsCard}
-                    >
-                      <Text style={styles.exerciseDetailsName}>
-                        {exercise.name}
-                      </Text>
-                      <View style={styles.detailSetsContainer}>
-                        {exercise.sets.map((set, setIndex) => (
-                          <View key={setIndex} style={styles.detailsCardRow}>
-                            <Text style={styles.detailsSetNumber}>
-                              Set {setIndex + 1}
-                            </Text>
-                            <Text style={styles.detailsCardText}>
-                              {set.weight ? `${set.weight} kg` : "Bodyweight"} ×{" "}
-                              {set.reps} reps
-                            </Text>
-                          </View>
-                        ))}
-                      </View>
-                    </View>
-                  ))}
-                </ScrollView>
-              </View>
-            </View>
-          </Modal>
-
-          <Modal
-            visible={editRoutinePage}
-            animationType="slide"
-            transparent={true}
-          >
-            <View style={styles.editWorkoutOverlay}>
-              <View style={styles.editWorkoutContent}>
-                <View style={styles.editWorkoutHeader}>
-                  <View>
-                    <Text style={styles.editWorkoutTitle}>Edit Routine</Text>
-                    <View style={styles.editRoutineTitleContainer}>
-                      <Ionicons name="pencil" size={18} color="#aaa" />
-                      <TextInput
-                        placeholder={selectedRoutine?.title}
-                        placeholderTextColor="rgba(170,170,170,1)"
-                        value={routineTitle}
-                        onChangeText={(text) => {
-                          setRoutineTitle(text);
-                        }}
-                        style={styles.routineTitleInput}
-                      />
-                    </View>
-                  </View>
-                  <TouchableOpacity
-                    onPress={cancelEditRoutine}
-                    style={styles.editWorkoutButton}
-                  >
-                    <Ionicons name="close" size={24} color="white" />
-                  </TouchableOpacity>
-                </View>
-
-                <ScrollView
-                  style={styles.editWorkoutScroll}
-                  showsVerticalScrollIndicator={false}
-                >
-                  <Text style={styles.exercisesAddedText}>Exercises:</Text>
-
-                  {addedExercises.map((exercise, exerciseIndex) => (
-                    <View key={exerciseIndex} style={styles.editExerciseCard}>
-                      <View style={styles.editExerciseHeader}>
-                        <Text style={styles.exercisesAddedText}>
-                          {exercise.name}
-                        </Text>
-                        <TouchableOpacity
-                          onPress={() => removeExerciseFromEdit(exerciseIndex)}
-                          style={styles.removeExerciseButton}
-                        >
-                          <Ionicons
-                            name="trash-outline"
-                            size={20}
-                            color="#ff4c4c"
-                          />
-                        </TouchableOpacity>
-                      </View>
-
-                      {exercise.sets.map((set, setIndex) => (
-                        <View key={setIndex} style={styles.editSetRow}>
-                          <Text style={styles.setNumberText}>
-                            Set {setIndex + 1}
-                          </Text>
-                          <TextInput
-                            placeholder="Weight"
-                            placeholderTextColor="rgba(170,170,170,1)"
-                            value={set.weight.toString()}
-                            onChangeText={(text) => {
-                              const updated = [...addedExercises];
-                              updated[exerciseIndex].sets[setIndex].weight =
-                                Number(text);
-                              setAddedExercises(updated);
-                            }}
-                            style={styles.editSetInput}
-                            keyboardType="numeric"
-                          />
-                          <TextInput
-                            placeholder="Reps"
-                            placeholderTextColor="rgba(170,170,170,1)"
-                            value={set.reps.toString()}
-                            onChangeText={(text) => {
-                              const updated = [...addedExercises];
-                              updated[exerciseIndex].sets[setIndex].reps =
-                                Number(text);
-                              setAddedExercises(updated);
-                            }}
-                            style={styles.editSetInput}
-                            keyboardType="numeric"
-                          />
-                          <TouchableOpacity
-                            onPress={() => {
-                              const updated = [...addedExercises];
-                              updated[exerciseIndex].sets.splice(setIndex, 1);
-                              setAddedExercises(updated);
-                            }}
-                          >
-                            <Ionicons name="close" size={32} color="red" />
-                          </TouchableOpacity>
-                        </View>
-                      ))}
-
-                      <TouchableOpacity
-                        onPress={() => {
-                          const updated = [...addedExercises];
-                          updated[exerciseIndex].sets.push({
-                            weight: 0,
-                            reps: 0,
-                          });
-                          setAddedExercises(updated);
-                        }}
-                        style={styles.addSetButton}
-                      >
-                        <Text style={styles.addSetText}>+ Add Set</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </ScrollView>
-
-                <View style={styles.editWorkoutFooter}>
-                  <TouchableOpacity
-                    style={styles.addWorkouutButton}
-                    onPress={() => setAddExercisePage(true)}
-                  >
-                    <Text style={styles.workoutButtonText}>+ Add Exercise</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.finishEditWorkoutButton}
-                    onPress={() => {
-                      saveEditedRoutine();
-                    }}
-                  >
-                    <Text style={styles.workoutButtonText}>Finish</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-            <AddExerciseModal
-              visible={addExercisePage}
-              onClose={() => {
-                setAddExercisePage(false);
-                setSearchText("");
-              }}
-              searchText={searchText}
-              setSearchText={setSearchText}
-              filteredWorkouts={filteredWorkouts}
-              addedExercises={addedExercises}
-              setAddedExercises={setAddedExercises}
-              exerciseAlreadyAdded={exerciseAlreadyAdded}
-              onExerciseClicked={(exercise) => setSelectedExercise(exercise)}
-              selected={selectedExercise}
-              styles={styles}
-            />
-          </Modal>
         </Modal>
       </View>
-
-      <View style={{ flex: 1 }}>
-        <ScrollView>
+      <View style={{ flex: 1, paddingBottom: 100 }}>
+        <ScrollView style={{ flex: 1 }}>
           {savedWorkouts.length > 0 ? (
             <View style={styles.previousWorkoutsSection}>
               <Text style={styles.subHeader}>Previous Workouts</Text>
@@ -1363,21 +834,9 @@ const WorkoutScreen: React.FC = () => {
                 ) : (
                   addedExercises.map((exercise, exerciseIndex) => (
                     <View key={exerciseIndex} style={styles.addedExercises}>
-                      <View style={styles.editExerciseHeader}>
-                        <Text style={styles.exercisesAddedText}>
-                          {exercise.name}
-                        </Text>
-                        <TouchableOpacity
-                          onPress={() => removeExerciseFromEdit(exerciseIndex)}
-                          style={styles.removeExerciseButton}
-                        >
-                          <Ionicons
-                            name="trash-outline"
-                            size={20}
-                            color="#ff4c4c"
-                          />
-                        </TouchableOpacity>
-                      </View>
+                      <Text style={styles.exercisesAddedText}>
+                        {exercise.name}
+                      </Text>
                       {exercise.sets.map((set, setIndex) => (
                         <View
                           key={setIndex}
@@ -1413,20 +872,6 @@ const WorkoutScreen: React.FC = () => {
                             style={styles.setInput}
                             keyboardType="numeric"
                           />
-                          <TouchableOpacity
-                            onPress={() => {
-                              const updated = [...addedExercises];
-                              updated[exerciseIndex].sets.splice(setIndex, 1);
-                              setAddedExercises(updated);
-                            }}
-                          >
-                            <Ionicons
-                              name="close"
-                              size={32}
-                              color="red"
-                              style={{ paddingRight: 2 }}
-                            />
-                          </TouchableOpacity>
                         </View>
                       ))}
                       <TouchableOpacity
@@ -1558,15 +1003,6 @@ const WorkoutScreen: React.FC = () => {
                         style={styles.editSetInput}
                         keyboardType="numeric"
                       />
-                      <TouchableOpacity
-                        onPress={() => {
-                          const updated = [...addedExercises];
-                          updated[exerciseIndex].sets.splice(setIndex, 1);
-                          setAddedExercises(updated);
-                        }}
-                      >
-                        <Ionicons name="close" size={32} color="red" />
-                      </TouchableOpacity>
                     </View>
                   ))}
 
@@ -1670,7 +1106,6 @@ const styles = StyleSheet.create({
   },
   previousWorkoutsSection: {
     padding: 20,
-    height: "80%",
   },
   workoutCard: {
     backgroundColor: "rgba(30, 30, 30, 0.8)",
@@ -1814,12 +1249,18 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   workoutButtonSection: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: "rgb(0, 0, 0)",
-    paddingBottom: 110,
+    paddingBottom: 16,
     paddingHorizontal: 36,
+    zIndex: 10,
   },
   startWorkoutButton: {
     position: "absolute",
+    bottom: 100,
     left: 36,
     right: 36,
     backgroundColor: "rgba(255, 154, 2, 1)",
@@ -1836,8 +1277,7 @@ const styles = StyleSheet.create({
   },
   workoutProgressOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,1)",
-    paddingTop: 16,
+    paddingTop: 30,
   },
   workoutProgressContent: {
     flex: 1,
@@ -1925,6 +1365,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(27, 27, 27, 1)",
     alignItems: "center",
     position: "absolute",
+    bottom: 80,
     left: 0,
     right: 0,
   },
@@ -2219,91 +1660,6 @@ const styles = StyleSheet.create({
     color: "#000",
     fontWeight: "bold",
     fontSize: 16,
-  },
-  addRoutineModal: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 1)",
-  },
-  savedRoutines: {
-    flex: 1,
-  },
-  addRoutineHeader: {
-    height: 90,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-  },
-
-  headerTitleContainer: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingTop: 40,
-  },
-  routineBackButton: {
-    position: "absolute",
-    height: "100%",
-    padding: 8,
-  },
-  routineCard: {
-    backgroundColor: "rgba(127, 17, 224, 1)",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    width: 160,
-    height: 120,
-  },
-  routineCardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  routineHeader: {
-    color: "rgba(255, 255, 255, 1)",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  gridContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  routineTitleContainer: {
-    flexDirection: "row",
-    backgroundColor: "rgba(42, 42, 42, 1)",
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    marginHorizontal: 12,
-    flex: 1,
-  },
-  editRoutineTitleContainer: {
-    flexDirection: "row",
-    backgroundColor: "rgba(42, 42, 42, 1)",
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginTop: 18,
-    width: "150%",
-  },
-  routineTitleInput: {
-    color: "rgba(255,255,255,1)",
-    fontSize: 15,
-    marginLeft: 6,
-    flex: 1,
-  },
-  routineAddExerciseButton: {
-    backgroundColor: "rgba(255, 154, 2, 1)",
-    padding: 12.5,
-    marginBottom: 20,
-    marginHorizontal: 40,
-    borderRadius: 25,
-    alignItems: "center",
-    alignContent: "center",
-    justifyContent: "center",
-    width: "80%",
   },
 });
 

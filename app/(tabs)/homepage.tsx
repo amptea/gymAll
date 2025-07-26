@@ -318,72 +318,76 @@ const HomepageScreen: React.FC = () => {
                 Friends
               </ThemedText>
             </View>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Enter username"
-              placeholderTextColor="rgba(255,255,255,0.8)"
-              value={searchInput}
-              onChangeText={setSearchInput}
-            />
-            <TouchableOpacity
-              onPress={async () => {
-                const results = await searchByUsername(searchInput);
-                setSearchResults(results);
-              }}
-              style={styles.searchButton}
-            >
-              <ThemedText>Search</ThemedText>
-            </TouchableOpacity>
-            {searchResults.length > 0 && (
-              <View>
-                {searchResults.map((user, index) => {
-                  const isFollowing = followingUsers.has(user.id);
-                  return (
-                    <View key={index}>
-                      <View style={styles.userRow}>
-                        <View style={styles.userInfo}>
-                          {user.name && (
-                            <ThemedText style={styles.nameText}>
-                              {user.name}
+            <ScrollView>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Enter username"
+                placeholderTextColor="rgba(255,255,255,0.8)"
+                value={searchInput}
+                onChangeText={setSearchInput}
+              />
+              <TouchableOpacity
+                onPress={async () => {
+                  const results = await searchByUsername(searchInput);
+                  setSearchResults(results);
+                }}
+                style={styles.searchButton}
+              >
+                <ThemedText>Search</ThemedText>
+              </TouchableOpacity>
+              {searchResults.length > 0 && (
+                <View>
+                  {searchResults.map((user, index) => {
+                    const isFollowing = followingUsers.has(user.id);
+                    return (
+                      <View key={index}>
+                        <View style={styles.userRow}>
+                          <View style={styles.userInfo}>
+                            {user.name && (
+                              <ThemedText style={styles.nameText}>
+                                {user.name}
+                              </ThemedText>
+                            )}
+                            <ThemedText style={styles.usernameText}>
+                              {user.username}
                             </ThemedText>
-                          )}
-                          <ThemedText style={styles.usernameText}>
-                            {user.username}
-                          </ThemedText>
-                        </View>
-                        {isFollowing ? (
-                          <TouchableOpacity
-                            style={styles.followButtonFollowed}
-                            onPress={() => toggleFollow(user.id)}
-                          >
-                            <ThemedText style={styles.followButtonFollowedText}>
-                              Following
-                            </ThemedText>
-                          </TouchableOpacity>
-                        ) : (
-                          <TouchableOpacity
-                            style={styles.followButtonUnfollowed}
-                            onPress={() => toggleFollow(user.id)}
-                          >
-                            <ThemedText
-                              style={styles.followButtonUnfollowedText}
+                          </View>
+                          {isFollowing ? (
+                            <TouchableOpacity
+                              style={styles.followButtonFollowed}
+                              onPress={() => toggleFollow(user.id)}
                             >
-                              Follow
-                            </ThemedText>
-                          </TouchableOpacity>
+                              <ThemedText
+                                style={styles.followButtonFollowedText}
+                              >
+                                Following
+                              </ThemedText>
+                            </TouchableOpacity>
+                          ) : (
+                            <TouchableOpacity
+                              style={styles.followButtonUnfollowed}
+                              onPress={() => toggleFollow(user.id)}
+                            >
+                              <ThemedText
+                                style={styles.followButtonUnfollowedText}
+                              >
+                                Follow
+                              </ThemedText>
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                        {index < searchResults.length - 1 && (
+                          <View style={styles.userSeparator} />
                         )}
                       </View>
-                      {index < searchResults.length - 1 && (
-                        <View style={styles.userSeparator} />
-                      )}
-                    </View>
-                  );
-                })}
-              </View>
-            )}
-            {searchResults.length === 0 && searchInput.length > 0 && (
-              <ThemedText>No users found.</ThemedText>
-            )}
+                    );
+                  })}
+                </View>
+              )}
+              {searchResults.length === 0 && searchInput.length > 0 && (
+                <ThemedText>No users found.</ThemedText>
+              )}
+            </ScrollView>
           </View>
         </View>
       </Modal>

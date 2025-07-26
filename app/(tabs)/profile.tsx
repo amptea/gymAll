@@ -1,3 +1,5 @@
+import EditProfileModal from "@/components/EditProfileModal";
+import StatisticsModal from "@/components/StatisticsModal";
 import { db } from "@/FirebaseConfig";
 import { useAuth } from "@/hooks/useAuth";
 import { useStatistics } from "@/hooks/useStatistics";
@@ -17,19 +19,14 @@ import React, { useEffect, useState } from "react";
 import {
   Alert,
   Image,
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import EditProfileModal from "@/components/EditProfileModal";
-import StatisticsModal from "@/components/StatisticsModal";
 
 export default function ProfileScreen() {
   const { user } = useAuth();
@@ -248,7 +245,6 @@ export default function ProfileScreen() {
               <View style={styles.cardTextContainer}>
                 <Text style={styles.cardTitle}>Leaderboard</Text>
                 <Text style={styles.cardSubtext}>Check your rankings!</Text>
-                <Text style={styles.cardSubtext}>{score}</Text>
               </View>
             </View>
             <MaterialIcons
@@ -287,172 +283,176 @@ export default function ProfileScreen() {
         transparent={false}
       >
         <SafeAreaView style={styles.leaderboardContainer}>
-          <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-          <View style={styles.leaderboardHeaderRow}>
-            <View style={styles.backButtonIcon}>
-              <TouchableOpacity
-                onPress={() => setLeaderboardModalVisible(false)}
-              >
-                <Ionicons name="chevron-back" size={24} color="white" />
-              </TouchableOpacity>
+          <ScrollView>
+            <View style={styles.leaderboardHeaderRow}>
+              <View style={styles.backButtonIcon}>
+                <TouchableOpacity
+                  onPress={() => setLeaderboardModalVisible(false)}
+                >
+                  <Ionicons name="chevron-back" size={24} color="white" />
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.leaderboardHeaderText}>Leaderboard</Text>
             </View>
-            <Text style={styles.leaderboardHeaderText}>Leaderboard</Text>
-          </View>
-          {/*First three places UI */}
-          <View style={styles.topThreeContainer}>
-            <View style={styles.runnersUpContainer}>
-              {/* 2nd Place User */}
-              <View
-                style={[
-                  styles.topUsersPictureFrame,
-                  topThreeUsers[1]?.id === user?.uid && {
-                    borderColor: "rgba(62, 104, 35, 1)",
-                    borderWidth: 5,
-                  },
-                ]}
-              >
-                {topThreeUsers[1]?.profilePicture ? (
-                  <Image
-                    source={{ uri: topThreeUsers[1].profilePicture }}
-                    style={styles.topUsersPicture}
-                  />
-                ) : (
-                  <MaterialIcons
-                    name="person"
-                    size={90}
-                    color="rgba(255, 255, 255, 0.6)"
-                  />
-                )}
-              </View>
-              <View style={styles.positionContainer}>
-                <Text style={styles.positionText}>2</Text>
-              </View>
-              <View style={styles.userDetails}>
-                <Text style={styles.leaderboardName}>
-                  {topThreeUsers[1]?.name || "Unknown User"}
-                </Text>
-                <Text style={styles.leaderboardPoints}>
-                  {Math.round(topThreeUsers[1]?.score) || "0"} pts
-                </Text>
-              </View>
-            </View>
-            <View style={styles.topUserContainer}>
-              {/* 1st Place User */}
-              <View
-                style={[
-                  styles.topUsersPictureFrame,
-                  topThreeUsers[0]?.id === user?.uid && {
-                    borderColor: "rgba(62, 104, 35, 1)",
-                    borderWidth: 5,
-                  },
-                ]}
-              >
-                {topThreeUsers[0]?.profilePicture ? (
-                  <Image
-                    source={{ uri: topThreeUsers[0].profilePicture }}
-                    style={styles.topUsersPicture}
-                  />
-                ) : (
-                  <MaterialIcons
-                    name="person"
-                    size={90}
-                    color="rgba(255, 255, 255, 0.6)"
-                  />
-                )}
-              </View>
-              <View style={styles.positionContainer}>
-                <Text style={styles.positionText}>1</Text>
-              </View>
-
-              <View style={styles.userDetails}>
-                <Text style={styles.leaderboardName}>
-                  {topThreeUsers[0]?.name || "Unknown User"}
-                </Text>
-                <Text style={styles.leaderboardPoints}>
-                  {Math.round(topThreeUsers[0]?.score) || "0"} pts
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.runnersUpContainer}>
-              {/* 3rd Place User */}
-              <View
-                style={[
-                  styles.topUsersPictureFrame,
-                  topThreeUsers[2]?.id === user?.uid && {
-                    borderColor: "rgba(62, 104, 35, 1)",
-                    borderWidth: 5,
-                  },
-                ]}
-              >
-                {topThreeUsers[2]?.profilePicture ? (
-                  <Image
-                    source={{ uri: topThreeUsers[2].profilePicture }}
-                    style={styles.topUsersPicture}
-                  />
-                ) : (
-                  <MaterialIcons
-                    name="person"
-                    size={90}
-                    color="rgba(255, 255, 255, 0.6)"
-                  />
-                )}
-              </View>
-              <View style={styles.positionContainer}>
-                <Text style={styles.positionText}>3</Text>
-              </View>
-              <View style={styles.userDetails}>
-                <Text style={styles.leaderboardName}>
-                  {topThreeUsers[2]?.name || "Unknown User"}
-                </Text>
-                <Text style={styles.leaderboardPoints}>
-                  {Math.round(topThreeUsers[2]?.score) || "0"} pts
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          {/* 4th - 10th UI*/}
-          <View style={styles.topTenContainer}>
-            {fourthToTenthUsers.map((userMap, index) => {
-              const isCurrentUser = userMap.id === user?.uid;
-              return (
+            {/*First three places UI */}
+            <View style={styles.topThreeContainer}>
+              <View style={styles.runnersUpContainer}>
+                {/* 2nd Place User */}
                 <View
-                  key={userMap.id}
                   style={[
-                    styles.topTenCard,
-                    isCurrentUser && {
-                      backgroundColor: "rgba(62, 104, 35, 1)",
+                    styles.topUsersPictureFrame,
+                    topThreeUsers[1]?.id === user?.uid && {
+                      borderColor: "rgba(62, 104, 35, 1)",
+                      borderWidth: 5,
                     },
                   ]}
                 >
-                  <View style={styles.topTenProfileContainer}>
-                    <Text style={styles.topTenNumber}>{index + 4}</Text>
-                    <View style={styles.topTenProfilePicture}>
-                      {userMap?.profilePicture ? (
-                        <Image source={{ uri: userMap.profilePicture }} />
-                      ) : (
-                        <MaterialIcons
-                          name="person"
-                          size={40}
-                          color="rgba(255, 255, 255, 0.6)"
-                        />
-                      )}
+                  {topThreeUsers[1]?.profilePicture ? (
+                    <Image
+                      source={{ uri: topThreeUsers[1].profilePicture }}
+                      style={styles.topUsersPicture}
+                    />
+                  ) : (
+                    <MaterialIcons
+                      name="person"
+                      size={90}
+                      color="rgba(255, 255, 255, 0.6)"
+                    />
+                  )}
+                </View>
+                <View style={styles.positionContainer}>
+                  <Text style={styles.positionText}>2</Text>
+                </View>
+                <View style={styles.userDetails}>
+                  <Text style={styles.leaderboardName}>
+                    {topThreeUsers[1]?.name || "Unknown User"}
+                  </Text>
+                  <Text style={styles.leaderboardPoints}>
+                    {Math.round(topThreeUsers[1]?.score) || "0"} pts
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.topUserContainer}>
+                {/* 1st Place User */}
+                <View
+                  style={[
+                    styles.topUsersPictureFrame,
+                    topThreeUsers[0]?.id === user?.uid && {
+                      borderColor: "rgba(62, 104, 35, 1)",
+                      borderWidth: 5,
+                    },
+                  ]}
+                >
+                  {topThreeUsers[0]?.profilePicture ? (
+                    <Image
+                      source={{ uri: topThreeUsers[0].profilePicture }}
+                      style={styles.topUsersPicture}
+                    />
+                  ) : (
+                    <MaterialIcons
+                      name="person"
+                      size={90}
+                      color="rgba(255, 255, 255, 0.6)"
+                    />
+                  )}
+                </View>
+                <View style={styles.positionContainer}>
+                  <Text style={styles.positionText}>1</Text>
+                </View>
+
+                <View style={styles.userDetails}>
+                  <Text style={styles.leaderboardName}>
+                    {topThreeUsers[0]?.name || "Unknown User"}
+                  </Text>
+                  <Text style={styles.leaderboardPoints}>
+                    {Math.round(topThreeUsers[0]?.score) || "0"} pts
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.runnersUpContainer}>
+                {/* 3rd Place User */}
+                <View
+                  style={[
+                    styles.topUsersPictureFrame,
+                    topThreeUsers[2]?.id === user?.uid && {
+                      borderColor: "rgba(62, 104, 35, 1)",
+                      borderWidth: 5,
+                    },
+                  ]}
+                >
+                  {topThreeUsers[2]?.profilePicture ? (
+                    <Image
+                      source={{ uri: topThreeUsers[2].profilePicture }}
+                      style={styles.topUsersPicture}
+                    />
+                  ) : (
+                    <MaterialIcons
+                      name="person"
+                      size={90}
+                      color="rgba(255, 255, 255, 0.6)"
+                    />
+                  )}
+                </View>
+                <View style={styles.positionContainer}>
+                  <Text style={styles.positionText}>3</Text>
+                </View>
+                <View style={styles.userDetails}>
+                  <Text style={styles.leaderboardName}>
+                    {topThreeUsers[2]?.name || "Unknown User"}
+                  </Text>
+                  <Text style={styles.leaderboardPoints}>
+                    {Math.round(topThreeUsers[2]?.score) || "0"} pts
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* 4th - 10th UI*/}
+            <View style={styles.topTenContainer}>
+              {fourthToTenthUsers.map((userMap, index) => {
+                const isCurrentUser = userMap.id === user?.uid;
+                return (
+                  <View
+                    key={userMap.id}
+                    style={[
+                      styles.topTenCard,
+                      isCurrentUser && {
+                        backgroundColor: "rgba(62, 104, 35, 1)",
+                      },
+                    ]}
+                  >
+                    <View style={styles.topTenProfileContainer}>
+                      <Text style={styles.topTenNumber}>{index + 4}</Text>
+                      <View>
+                        {userMap?.profilePicture ? (
+                          <Image
+                            source={{ uri: userMap.profilePicture }}
+                            style={styles.topTenProfilePicture}
+                          />
+                        ) : (
+                          <MaterialIcons
+                            name="person"
+                            size={40}
+                            color="rgba(255, 255, 255, 0.6)"
+                            style={styles.topTenProfilePicture}
+                          />
+                        )}
+                      </View>
+                    </View>
+                    <View style={styles.topTenDetailsContainer}>
+                      <Text style={styles.topTenText}>
+                        {userMap?.name || "Unknown User"}{" "}
+                      </Text>
+                      <Text style={styles.leaderboardPoints}>
+                        {Math.round(userMap?.score) || "0"} pts
+                      </Text>
                     </View>
                   </View>
-                  <View style={styles.topTenDetailsContainer}>
-                    <Text style={styles.topTenText}>
-                      {userMap?.name || "Unknown User"}{" "}
-                    </Text>
-                    <Text style={styles.leaderboardPoints}>
-                      {Math.round(userMap?.score) || "0"} pts
-                    </Text>
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-        </ScrollView>
+                );
+              })}
+            </View>
+          </ScrollView>
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
@@ -552,7 +552,7 @@ const styles = StyleSheet.create({
   },
   leaderboardContainer: {
     flex: 1,
-    backgroundColor: "rgba(47, 52, 55, 1)",
+    backgroundColor: "rgba(0, 0, 0, 1)",
   },
   topThreeContainer: {
     flexDirection: "row",
@@ -614,7 +614,7 @@ const styles = StyleSheet.create({
     width: 90,
     height: 90,
     borderRadius: 90,
-    borderColor: "rgba(82, 77, 77, 1)",
+    borderColor: "rgba(186, 176, 176, 1)",
     borderWidth: 1,
   },
   topUsersPicture: {
@@ -623,7 +623,6 @@ const styles = StyleSheet.create({
     borderRadius: 90,
   },
   topTenContainer: {
-    flex: 1,
     backgroundColor: "rgba(0,0,0,1)",
     padding: 10,
   },
@@ -651,7 +650,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 32,
-    borderColor: "rgba(82, 77, 77, 1)",
+    borderColor: "rgba(206, 202, 202, 1)",
     borderWidth: 0.8,
   },
   topTenNumber: {
