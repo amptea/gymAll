@@ -1,4 +1,5 @@
 import ScheduleWorkoutModal from "@/components/ScheduleWorkoutModal";
+import PreviewScheduleWorkoutModal from "@/components/PreviewScheduleWorkoutModal";
 import { db } from "@/FirebaseConfig";
 import { useAuth } from "@/hooks/useAuth";
 import { collection, getDocs, doc, getDoc } from "firebase/firestore";
@@ -28,10 +29,16 @@ interface Schedule {
 export default function SchedulerScreen() {
   const [selected, setSelected] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isPreviewModalVisible, setIsPreviewModalVisible] = useState(false);
+  const [selectedWorkout, setSelectedWorkout] = useState<Schedule | null>(null);
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [workoutToEdit, setWorkoutToEdit] = useState<Schedule | null>(null);
   const [schedule, setSchedule] = useState<Schedule[] | null>(null);
   const [scheduleForDate, setScheduleForDate] = useState<Schedule[] | null>(null);
   const { user } = useAuth();
   const [friends, setFriends] = useState<{ uid: string; displayName: string }[]>([]);
+  const [allParticipants, setAllParticipants] = useState<{ uid: string; displayName: string }[]>([]);
+  const [datesWithWorkouts, setDatesWithWorkouts] = useState({});
 
   const getCurrentDate = () => {
     const now = new Date();
@@ -43,10 +50,63 @@ export default function SchedulerScreen() {
 
   const [currentDate, setCurrentDate] = useState(getCurrentDate());
 
+  const getParticipantIndicator = (participantCount: number) => {
+    if (participantCount === 1) return "1";
+    if (participantCount === 2) return "2";
+    if (participantCount === 3) return "3";
+    if (participantCount > 3) return "3+";
+    return "1";
+  };
+
+  const getParticipantDotColor = (participantCount: number) => {
+    if (participantCount === 1) return "#00ff00";
+    if (participantCount === 2) return "#00ffff";
+    if (participantCount === 3) return "#ff00ff";
+    if (participantCount > 3) return "#ff9a02";
+    return "#00ff00";
+  };
+
+
+
+
+
+  const generateWorkoutIndicators = (schedules: Schedule[]) => {
+    const marked: any = {};
+    
+    schedules.forEach((schedule) => {
+      const dateString = schedule.date.toISOString().split('T')[0];
+      const participantCount = schedule.participants ? schedule.participants.length : 0;
+      const indicator = getParticipantIndicator(participantCount);
+      
+      if (marked[dateString]) {
+        const existingCount = marked[dateString].participantCount || 0;
+        const newCountNum = participantCount;
+        
+        if (newCountNum > existingCount) {
+          marked[dateString] = {
+            ...marked[dateString],
+            participantCount: participantCount,
+            marked: true,
+            dotColor: getParticipantDotColor(participantCount)
+          };
+        }
+      } else {
+        marked[dateString] = {
+          participantCount: participantCount,
+          marked: true,
+          dotColor: getParticipantDotColor(participantCount)
+        };
+      }
+    });
+    
+    return marked;
+  };
+
   useEffect(() => {
     setCurrentDate(getCurrentDate());
     setSelected(currentDate);
     getScheduleForDate(currentDate);
+    loadScheduleFromFirestore();
 
     const interval = setInterval(() => {
       setCurrentDate(getCurrentDate());
@@ -61,6 +121,7 @@ export default function SchedulerScreen() {
   useEffect(() => {
     if (user) {
       loadFriendsFromFirestore();
+      loadAllParticipants();
     }
   }, [user]);
 
@@ -90,6 +151,43 @@ export default function SchedulerScreen() {
       }
     } catch (error) {
       setFriends([]);
+    }
+  };
+
+  const loadAllParticipants = async () => {
+    if (!user) return;
+    try {
+      const scheduleRef = collection(db, "schedule");
+      const scheduleList = await getDocs(scheduleRef);
+      const allUserIds = new Set<string>();
+      
+      scheduleList.forEach((doc) => {
+        const data = doc.data();
+        if (data.userId === user.uid || (data.participants && data.participants.includes(user.uid))) {
+          allUserIds.add(data.userId);
+          if (data.participants && Array.isArray(data.participants)) {
+            data.participants.forEach((participantId: string) => {
+              allUserIds.add(participantId);
+            });
+          }
+        }
+      });
+      
+      const participantDocs = await Promise.all(
+        Array.from(allUserIds).map(async (userId: string) => {
+          const userRef = doc(db, 'users', userId);
+          const userDoc = await getDoc(userRef);
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            return { uid: userId, displayName: userData.username || 'Unknown User' };
+          }
+          return null;
+        })
+      );
+      
+      setAllParticipants(participantDocs.filter(Boolean) as { uid: string; displayName: string }[]);
+    } catch (error) {
+      setAllParticipants([]);
     }
   };
 
@@ -127,7 +225,8 @@ export default function SchedulerScreen() {
 
       scheduleList.forEach((doc) => {
         const data = doc.data();
-        if (data.userId === user.uid) {
+        
+        if (data.userId === user.uid || (data.participants && data.participants.includes(user.uid))) {
           schedules.push({
             userId: data.userId,
             id: doc.id,
@@ -141,6 +240,10 @@ export default function SchedulerScreen() {
         }
       })
       setSchedule(schedules);
+      
+      const datesWithWorkoutIndicators = generateWorkoutIndicators(schedules);
+      setDatesWithWorkouts(datesWithWorkoutIndicators);
+      
       return schedules;
     } catch (error) {
       Alert.alert("Error", "Failed to load schedules");
@@ -148,19 +251,30 @@ export default function SchedulerScreen() {
     }
   }
 
-  const dateColours = {
-    [selected]: {
-      selected: true,
-      selectedColor: "rgba(255, 154, 2, 0.8)",
-      selectedTextColor: "rgba(0, 0, 0, 0.5)",
-    },
-    [currentDate]: {
-      selected: true,
-      selectedColor: selected === currentDate 
-      ? "rgba(255, 154, 2, 0.8)" 
-      : "rgba(255, 255, 255, 0.8)", 
-      selectedTextColor: "rgba(0, 0, 0, 0.5)",
-    },
+  const getDatesWithWorkouts = () => {
+    const merged: any = { ...datesWithWorkouts };
+    
+    if (selected) {
+      merged[selected] = {
+        ...merged[selected],
+        selected: true,
+        selectedColor: "rgba(255, 154, 2, 0.8)",
+        selectedTextColor: "rgba(0, 0, 0, 0.5)",
+      };
+    }
+    
+    if (currentDate) {
+      merged[currentDate] = {
+        ...merged[currentDate],
+        selected: true,
+        selectedColor: selected === currentDate 
+          ? "rgba(255, 154, 2, 0.8)" 
+          : "rgba(255, 255, 255, 0.8)", 
+        selectedTextColor: "rgba(0, 0, 0, 0.5)",
+      };
+    }
+    
+    return merged;
   };
 
   const scheduleButtonPressed = () => {
@@ -169,6 +283,30 @@ export default function SchedulerScreen() {
 
   const scheduleButtonClosed = () => {
     setIsModalVisible(false);
+  };
+
+  const openPreviewModal = (workout: Schedule) => {
+    setSelectedWorkout(workout);
+    setIsPreviewModalVisible(true);
+  };
+
+  const closePreviewModal = () => {
+    setIsPreviewModalVisible(false);
+    setSelectedWorkout(null);
+  };
+
+  const handleEditWorkout = (workout: Schedule) => {
+    setWorkoutToEdit(workout);
+    setIsEditModalVisible(true);
+  };
+
+  const closeEditModal = () => {
+    setIsEditModalVisible(false);
+    setWorkoutToEdit(null);
+  };
+
+  const handleWorkoutEdited = () => {
+    handleNewWorkout();
   };
 
   const formatDate = (date: Date) => {
@@ -193,20 +331,22 @@ export default function SchedulerScreen() {
 
   const handleNewWorkout = () => {
     getScheduleForDate(selected || currentDate);
+    loadScheduleFromFirestore();
   };
 
   return (
     <View style={styles.container}>
       <CalendarList
         style={styles.calendar}
-        markedDates={dateColours}
+        markedDates={getDatesWithWorkouts()}
+
         theme={{
           backgroundColor: "#000000",
           calendarBackground: "#000000",
           textSectionTitleColor: "#ffffff",
           todayTextColor: "#ffffff",
           dayTextColor: "#ffffff",
-          dotColor: "#00adf5",
+          dotColor: "#ff9a02",
           monthTextColor: "#ffffff",
           textMonthFontWeight: "bold",
           textDayFontSize: 16,
@@ -225,6 +365,7 @@ export default function SchedulerScreen() {
         showScrollIndicator={false}
         calendarWidth={Dimensions.get("window").width}
         current={currentDate}
+        markingType="dot"
       />
 
       {(selected || currentDate) && scheduleForDate?.length === 0 ? (
@@ -237,7 +378,12 @@ export default function SchedulerScreen() {
             {formatDate(new Date(selected)) || formatDate(new Date(currentDate))}
           </Text>
           {scheduleForDate.sort((x, y) => x.startTime - y.startTime).map((schedule, index) => (
-            <View key={schedule.id || index} style={styles.eventContainer}>
+            <TouchableOpacity 
+              key={schedule.id || index} 
+              style={styles.eventContainer}
+              onPress={() => openPreviewModal(schedule)}
+              activeOpacity={0.7}
+            >
               <View style={styles.eventHeaderContainer}>
                 <Text style={styles.eventTitle}>{schedule.title}</Text>
                   <View style={styles.eventTimeContainer}>
@@ -253,7 +399,7 @@ export default function SchedulerScreen() {
                 <Text style={styles.eventNotes}>{schedule.notes}</Text>
               </View>
               }
-            </View>
+            </TouchableOpacity>
           ))}
         </ScrollView>
       ) : null}
@@ -271,6 +417,24 @@ export default function SchedulerScreen() {
         selectedDate={selected}
         onWorkoutScheduled={handleNewWorkout}
         friends={friends}
+      />
+
+      <ScheduleWorkoutModal
+        isVisible={isEditModalVisible}
+        onClose={closeEditModal}
+        selectedDate={selected}
+        onWorkoutEdited={handleWorkoutEdited}
+        friends={friends}
+        editWorkout={workoutToEdit}
+      />
+
+      <PreviewScheduleWorkoutModal
+        isVisible={isPreviewModalVisible}
+        onClose={closePreviewModal}
+        workout={selectedWorkout}
+        participants={allParticipants}
+        onWorkoutDeleted={handleNewWorkout}
+        onEditWorkout={handleEditWorkout}
       />
     </View>
   );

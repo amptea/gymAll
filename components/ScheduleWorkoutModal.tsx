@@ -1,7 +1,7 @@
 import { db } from "@/FirebaseConfig";
 import { useAuth } from "@/hooks/useAuth";
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { addDoc, collection } from "firebase/firestore";
+import { addDoc, collection, updateDoc, deleteDoc, doc } from "firebase/firestore";
 import { useEffect, useState } from 'react';
 import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -13,6 +13,8 @@ interface ScheduleWorkoutModalProps {
   selectedDate: string;
   onWorkoutScheduled?: () => void;
   friends: { uid: string; displayName: string }[]; 
+  editWorkout?: Schedule | null;
+  onWorkoutEdited?: () => void;
 }
 
 interface Schedule {
@@ -27,7 +29,7 @@ interface Schedule {
 }
 
 const ScheduleWorkoutModal: React.FC<ScheduleWorkoutModalProps> = 
-({ isVisible, onClose, selectedDate, onWorkoutScheduled, friends }) => {
+({ isVisible, onClose, selectedDate, onWorkoutScheduled, friends, editWorkout, onWorkoutEdited }) => {
   const [scheduleDetails, setScheduleDetails] = useState({
       title: '',
       date: selectedDate,
@@ -45,22 +47,39 @@ const ScheduleWorkoutModal: React.FC<ScheduleWorkoutModalProps> =
       startTime: '',
       duration: '',
       title: '',
+      date: '',
     });
     const { user } = useAuth();
-
-  // Update date when modal opens or when selected date changes
+    
   useEffect(() => {
     if (isVisible) {
-      setScheduleDetails({
-        title: '',
-        date: selectedDate,
+      if (editWorkout) {
+        setScheduleDetails({
+          title: editWorkout.title,
+          date: editWorkout.date.toISOString().split('T')[0],
+          startTime: editWorkout.startTime.toString(),
+          duration: editWorkout.duration.toString(),
+          notes: editWorkout.notes || '',
+        });
+        setSelectedFriends(editWorkout.participants.filter(uid => uid !== user?.uid));
+      } else {
+        setScheduleDetails({
+          title: '',
+          date: selectedDate,
+          startTime: '',
+          duration: '',
+          notes: '',
+        });
+        setSelectedFriends([]); 
+      }
+      setErrors({
         startTime: '',
         duration: '',
-        notes: '',
+        title: '',
+        date: '',
       });
-      setSelectedFriends([]); 
     }
-  }, [isVisible, selectedDate]);
+  }, [isVisible, selectedDate, editWorkout, user?.uid]);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return '';
@@ -104,7 +123,7 @@ const ScheduleWorkoutModal: React.FC<ScheduleWorkoutModalProps> =
   };
 
   const handleScheduleWorkout = async () => {
-    const newErrors = { startTime: '', duration: '', title: '' };
+    const newErrors = { startTime: '', duration: '', title: '', date: '' };
     
     if (!scheduleDetails.title || scheduleDetails.title.length === 0) {
       newErrors.title = 'Please enter a title';
@@ -112,36 +131,67 @@ const ScheduleWorkoutModal: React.FC<ScheduleWorkoutModalProps> =
     
     if (!scheduleDetails.startTime || scheduleDetails.startTime.length !== 4) {
       newErrors.startTime = 'Please enter a valid time in 24-hour format (eg. 1300 for 1:00PM)';
+    } else {
+      const hours = parseInt(scheduleDetails.startTime.substring(0, 2));
+      const minutes = parseInt(scheduleDetails.startTime.substring(2, 4));
+      
+      if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+        newErrors.startTime = 'Please enter a valid time (hours: 00-23, minutes: 00-59)';
+      }
     }
     
     if (!scheduleDetails.duration || parseInt(scheduleDetails.duration) <= 0) {
       newErrors.duration = 'Please enter a valid duration (in minutes)';
     }
+
+    const selectedDate = new Date(scheduleDetails.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     
-    if (newErrors.startTime || newErrors.duration || newErrors.title) {
+    if (selectedDate < today) {
+      newErrors.date = 'Cannot schedule workouts in the past :(';
+    }
+    
+    if (newErrors.startTime || newErrors.duration || newErrors.title || newErrors.date) {
       setErrors(newErrors);
       return;
     }
     
     onClose();
-    const participants = [user?.uid, ...selectedFriends.filter(uid => uid !== user?.uid)].filter(Boolean) as string[]; // always include self, filter out undefined
-    const newSchedule: Schedule = {
-      userId: user?.uid || '',
-      id: '',
-      title: scheduleDetails.title.trim(),
-      date: new Date(scheduleDetails.date),
-      startTime: parseInt(scheduleDetails.startTime),
-      duration: parseInt(scheduleDetails.duration),
-      notes: scheduleDetails.notes,
-      participants,
-    };
-    const scheduleId = await saveScheduleToFirestore(newSchedule);
-    if (scheduleId) {
-      const savedSchedule = { ...newSchedule, id: scheduleId };
-      setSchedule(prev => [savedSchedule, ...(prev || [])]);
+    const participants = [user?.uid, ...selectedFriends.filter(uid => uid !== user?.uid)].filter(Boolean) as string[];
+    
+    if (editWorkout) {
+      await updateScheduleInFirestore(editWorkout.id, {
+        title: scheduleDetails.title.trim(),
+        date: new Date(scheduleDetails.date),
+        startTime: parseInt(scheduleDetails.startTime),
+        duration: parseInt(scheduleDetails.duration),
+        notes: scheduleDetails.notes,
+        participants,
+      });
       
-      if (onWorkoutScheduled) {
-        onWorkoutScheduled();
+      if (onWorkoutEdited) {
+        onWorkoutEdited();
+      }
+    } else {
+      const newSchedule: Schedule = {
+        userId: user?.uid || '',
+        id: '',
+        title: scheduleDetails.title.trim(),
+        date: new Date(scheduleDetails.date),
+        startTime: parseInt(scheduleDetails.startTime),
+        duration: parseInt(scheduleDetails.duration),
+        notes: scheduleDetails.notes,
+        participants,
+      };
+      const scheduleId = await saveScheduleToFirestore(newSchedule);
+      if (scheduleId) {
+        const savedSchedule = { ...newSchedule, id: scheduleId };
+        setSchedule(prev => [savedSchedule, ...(prev || [])]);
+        
+        if (onWorkoutScheduled) {
+          onWorkoutScheduled();
+        }
       }
     }
   };
@@ -158,6 +208,7 @@ const ScheduleWorkoutModal: React.FC<ScheduleWorkoutModalProps> =
         ...prev,
         date: date.toISOString().split('T')[0]
       }));
+      if (errors.date) setErrors(prev => ({ ...prev, date: '' }));
     }
     setShowDatePicker(false);
     setDate(null);
@@ -186,6 +237,20 @@ const ScheduleWorkoutModal: React.FC<ScheduleWorkoutModalProps> =
     }
   }
 
+  const updateScheduleInFirestore = async (scheduleId: string, scheduleData: any) => {
+    if (!user) {
+      Alert.alert("Error", "User not found");
+      return;
+    }
+    try {
+      const scheduleRef = doc(db, "schedule", scheduleId);
+      await updateDoc(scheduleRef, scheduleData);
+      Alert.alert("Success", "Workout updated successfully");
+    } catch (error) {
+      Alert.alert("Error", "Cannot update schedule successfully");
+    }
+  }
+
   return (
     <Modal
       animationType="slide"
@@ -199,7 +264,9 @@ const ScheduleWorkoutModal: React.FC<ScheduleWorkoutModalProps> =
             <TouchableOpacity onPress={onClose} style={{ padding: 4 }}>
               <MaterialIcons name="close" size={28} color="#fff" />
             </TouchableOpacity>
-            <Text style={[styles.textHeader, { flex: 1, textAlign: 'center', marginBottom: 0 }]}>Schedule New Workout</Text>
+            <Text style={[styles.textHeader, { flex: 1, textAlign: 'center', marginBottom: 0 }]}>
+              {editWorkout ? 'Edit Workout' : 'Schedule New Workout'}
+            </Text>
             <View style={{ width: 28 }} />
           </View>
           <ScrollView>
@@ -225,12 +292,13 @@ const ScheduleWorkoutModal: React.FC<ScheduleWorkoutModalProps> =
                   </Text>
               <TouchableOpacity
                 onPress={() => setShowDatePicker(true)}
-                style={styles.dateButton}
+                style={[styles.dateButton, errors.date ? styles.inputError : null]}
               >
                 <Text style={styles.dateButtonText}>
                   {formatDate(scheduleDetails.date)}
                 </Text>
               </TouchableOpacity>
+              {errors.date ? <Text style={styles.errorText}>{errors.date}</Text> : null}
               {showDatePicker && (
                 <View style={styles.datePickerContainer}>
                   <DateTimePicker
@@ -338,7 +406,9 @@ const ScheduleWorkoutModal: React.FC<ScheduleWorkoutModalProps> =
               style={styles.scheduleButton}
               onPress={handleScheduleWorkout}
             >
-              <Text style={styles.buttonText}>Schedule Workout</Text>
+              <Text style={styles.buttonText}>
+                {editWorkout ? 'Update Workout' : 'Schedule Workout'}
+              </Text>
             </TouchableOpacity>
           </ScrollView>
         </Pressable>
