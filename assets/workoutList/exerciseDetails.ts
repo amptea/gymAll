@@ -4,5 +4,4 @@ const exerciseDetails: { [key: string]: any } = {
     "EZ-bar spider curl": require("@/assets/images/exercises/ez-bar-spider-curl.png"),
 
 };
-
 export default exerciseDetails;

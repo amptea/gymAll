@@ -1,4 +1,4 @@
-import workoutList from "@/assets/workoutList/exercises";
+import workoutList, { workoutMap } from "@/assets/workoutList/exercises";
 import AddExerciseModal from "@/components/AddExerciseModal";
 import { db } from "@/FirebaseConfig";
 import { useAuth } from "@/hooks/useAuth";
@@ -16,6 +16,7 @@ import {
 import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Image,
   Modal,
   ScrollView,
   StyleSheet,
@@ -25,9 +26,19 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import BackIcon from "../../assets/icons/back.png";
+import BicepsIcon from "../../assets/icons/biceps.png";
+import ChestIcon from "../../assets/icons/chest.png";
+import CoreIcon from "../../assets/icons/core.png";
+import GluteIcon from "../../assets/icons/glute.png";
+import LegIcon from "../../assets/icons/leg.png";
+import ShoulderIcon from "../../assets/icons/shoulder.png";
+import TricepIcon from "../../assets/icons/triceps.png";
 
 const WorkoutScreen: React.FC = () => {
   const { user } = useAuth();
+
+  /* Handle Exercise Entries*/
   const [addExercisePage, setAddExercisePage] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [workoutStartedPage, setWorkoutStartedPage] = useState(false);
@@ -35,6 +46,9 @@ const WorkoutScreen: React.FC = () => {
   const [addedExercisesCache, setAddedExercisesCache] = useState<
     ExerciseEntry[]
   >([]);
+  const [selectedExercise, setSelectedExercise] = useState<string | null>(null);
+
+  /* Handle Workout Editing*/
   const [savedWorkouts, setSavedWorkouts] = useState<SavedWorkout[]>([]);
   const [selectedWorkout, setSelectedWorkout] = useState<SavedWorkout | null>(
     null
@@ -44,12 +58,17 @@ const WorkoutScreen: React.FC = () => {
   const [editWorkoutPage, setEditWorkoutPage] = useState(false);
   const [currentWorkoutEdited, setCurrentWorkoutEdited] =
     useState<SavedWorkout | null>(null);
+
+  /* Handle Score*/
   const [weight, setWeight] = useState(0);
   const [score, setScore] = useState(0);
+
+  /* Handle Time*/
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const timerRef = useRef<number | null>(null);
-  const [selectedExercise, setSelectedExercise] = useState<string | null>(null);
+
+  /* Handle Routines*/
   const [addRoutinePage, setAddRoutinePage] = useState(false);
   const [savedRoutines, setSavedRoutines] = useState<SavedRoutine[]>([]);
   const [currentRoutineEdited, setCurrentRoutineEdited] =
@@ -62,11 +81,41 @@ const WorkoutScreen: React.FC = () => {
   const [editRoutinePage, setEditRoutinePage] = useState(false);
   const [routineDetailPage, setRoutineDetailPage] = useState(false);
 
+  /*Handle Explore Page */
+  const [explorePage, setExplorePage] = useState(false);
+  const [otherUsersRoutines, setOtherUsersRoutines] = useState<SavedRoutine[]>(
+    []
+  );
+  const [recommendedWorkoutPage, setRecommendedWorkoutPage] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState("");
+  const muscleGroups = [
+    "Bicep",
+    "Chest",
+    "Back",
+    "Leg",
+    "Core",
+    "Glute",
+    "Shoulder",
+    "Tricep",
+  ] as const;
+
+  const muscleGroupIcons = {
+    Bicep: BicepsIcon,
+    Chest: ChestIcon,
+    Back: BackIcon,
+    Leg: LegIcon,
+    Core: CoreIcon,
+    Glute: GluteIcon,
+    Shoulder: ShoulderIcon,
+    Tricep: TricepIcon,
+  };
+
   useEffect(() => {
     if (user) {
       loadWorkoutsFromFirestore();
       loadUserInfo();
       loadRoutinesFromFirestore();
+      loadOthersRoutinesFromFirestore();
     }
   }, [user]);
 
@@ -378,7 +427,34 @@ const WorkoutScreen: React.FC = () => {
       });
       setSavedRoutines(routines);
     } catch (error) {
-      Alert.alert("Error", "Failed to load workouts");
+      Alert.alert("Error", "Failed to load routines");
+    }
+  };
+
+  const loadOthersRoutinesFromFirestore = async () => {
+    if (!user) {
+      Alert.alert("Error", "User not found");
+      return;
+    }
+    try {
+      const routineRef = collection(db, "routines");
+      const routineList = await getDocs(routineRef);
+      const routines: SavedRoutine[] = [];
+
+      routineList.forEach((doc) => {
+        const data = doc.data();
+        if (data.userId !== user.uid) {
+          routines.push({
+            userId: data.userId,
+            id: doc.id,
+            exercises: data.exercises,
+            title: data.title,
+          });
+        }
+      });
+      setOtherUsersRoutines(routines);
+    } catch (error) {
+      Alert.alert("Error", "Failed to load routines");
     }
   };
 
@@ -584,10 +660,13 @@ const WorkoutScreen: React.FC = () => {
             onPress={() => setAddRoutinePage(true)}
           >
             <Ionicons name="document-text-outline" size={24} color="white" />
-            <Text style={styles.routineText}>New Routine</Text>
+            <Text style={styles.routineText}>My Routines</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.routineBox}>
+          <TouchableOpacity
+            style={styles.routineBox}
+            onPress={() => setExplorePage(true)}
+          >
             <Ionicons name="search" size={24} color="white" />
             <Text style={styles.routineText}>Explore Routines</Text>
           </TouchableOpacity>
@@ -613,7 +692,7 @@ const WorkoutScreen: React.FC = () => {
               </View>
             </View>
 
-            <ScrollView style={styles.savedRoutines}>
+            <ScrollView style={{ flex: 1 }}>
               {savedRoutines.length > 0 ? (
                 <View
                   style={[
@@ -639,11 +718,11 @@ const WorkoutScreen: React.FC = () => {
                         <View style={styles.workoutCardBody}>
                           <Text style={styles.exercisePreviewText}>
                             {routine.exercises
-                              .slice(0, 2)
+                              .slice(0, 1)
                               .map((exercise) => exercise.name)
                               .join(", ")}
-                            {routine.exercises.length > 2 &&
-                              ` +${routine.exercises.length - 2} more`}
+                            {routine.exercises.length > 1 &&
+                              ` +${routine.exercises.length - 1} more`}
                           </Text>
                         </View>
                       </TouchableOpacity>
@@ -739,7 +818,7 @@ const WorkoutScreen: React.FC = () => {
                               onPress={() =>
                                 removeExerciseFromEdit(exerciseIndex)
                               }
-                              style={styles.removeExerciseButton}
+                              style={styles.editWorkoutButton}
                             >
                               <Ionicons
                                 name="trash-outline"
@@ -939,6 +1018,27 @@ const WorkoutScreen: React.FC = () => {
                     </View>
                   ))}
                 </ScrollView>
+
+                <View style={styles.workoutButtonSection}>
+                  <TouchableOpacity
+                    style={styles.startWorkoutButton}
+                    onPress={() => {
+                      setStartTime(new Date());
+                      setElapsedTime(0);
+                      if (timerRef.current) {
+                        clearInterval(timerRef.current);
+                      }
+
+                      timerRef.current = setInterval(() => {
+                        setElapsedTime((prev) => prev + 1);
+                      }, 1000);
+                    }}
+                  >
+                    <Text style={styles.workoutButtonText}>
+                      Start Routine Workout
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           </Modal>
@@ -988,7 +1088,7 @@ const WorkoutScreen: React.FC = () => {
                         </Text>
                         <TouchableOpacity
                           onPress={() => removeExerciseFromEdit(exerciseIndex)}
-                          style={styles.removeExerciseButton}
+                          style={styles.editWorkoutButton}
                         >
                           <Ionicons
                             name="trash-outline"
@@ -1050,7 +1150,7 @@ const WorkoutScreen: React.FC = () => {
                           });
                           setAddedExercises(updated);
                         }}
-                        style={styles.addSetButton}
+                        style={styles.editWorkoutButton}
                       >
                         <Text style={styles.addSetText}>+ Add Set</Text>
                       </TouchableOpacity>
@@ -1092,6 +1192,171 @@ const WorkoutScreen: React.FC = () => {
               selected={selectedExercise}
               styles={styles}
             />
+          </Modal>
+        </Modal>
+
+        <Modal visible={explorePage} animationType="slide" transparent={false}>
+          <View style={styles.container}>
+            <View style={styles.addRoutineHeader}>
+              <TouchableOpacity onPress={() => setExplorePage(false)}>
+                <Ionicons
+                  name="chevron-back"
+                  size={28}
+                  color="rgba(255, 255, 255, 1)"
+                  style={styles.routineBackButton}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                />
+              </TouchableOpacity>
+              <View style={styles.headerTitleContainer}>
+                <Text style={styles.headerText}>Explore Routines</Text>
+              </View>
+            </View>
+            <ScrollView style={{ flex: 1 }}>
+              <Text style={styles.exploreSubheader}>Recommended Workouts</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.exploreScrollView}
+              >
+                {muscleGroups.map((group, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.categoryCard}
+                    onPress={() => {
+                      setSelectedRoutine(workoutMap[group]);
+                      setRecommendedWorkoutPage(true);
+                    }}
+                  >
+                    <View style={styles.iconContainer}>
+                      <Image
+                        source={muscleGroupIcons[group]}
+                        style={styles.icon}
+                      />
+                    </View>
+                    <View style={styles.groupNameContainer}>
+                      <Text style={styles.categoryText}>{group}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              <View style={{ flex: 1, paddingLeft: 14 }}>
+                <Text style={styles.sectionHeader}>Your Community</Text>
+                {otherUsersRoutines.length === 0 ? (
+                  <Text style={styles.exploreCommunityEmpty}>
+                    No routines found.
+                  </Text>
+                ) : (
+                  otherUsersRoutines.map((routine) => (
+                    <TouchableOpacity
+                      key={routine.id}
+                      onPress={() => {
+                        setSelectedRoutine(routine);
+                        setRecommendedWorkoutPage(true);
+                      }}
+                    >
+                      <View style={styles.othersRoutineCard}>
+                        <Text style={styles.othersRoutineTitle}>
+                          {routine.title}
+                        </Text>
+                        <Text style={styles.exerciseList}>
+                          {routine.exercises
+                            .slice(0, 2)
+                            .map((exercise) => exercise.name)
+                            .join(", ")}{" "}
+                          {routine.exercises.length > 2 &&
+                            ` +${routine.exercises.length - 2} more`}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))
+                )}
+              </View>
+            </ScrollView>
+          </View>
+          <Modal
+            visible={recommendedWorkoutPage}
+            animationType="slide"
+            transparent={false}
+          >
+            <View style={styles.workoutDetailOverlay}>
+              <View style={styles.workoutDetailContent}>
+                <View style={styles.workoutDetailHeader}>
+                  <View>
+                    <Text
+                      style={[
+                        styles.workoutDetailTitle,
+                        { paddingLeft: 14, fontSize: 22, paddingTop: 6 },
+                      ]}
+                    >
+                      {selectedRoutine?.title} Exercises
+                    </Text>
+                  </View>
+                  <View style={styles.workoutDetailActions}>
+                    <TouchableOpacity
+                      onPress={() =>
+                        Alert.alert(
+                          "Confirm Save",
+                          "Are you sure you want to save?",
+                          [
+                            { text: "Cancel" },
+                            {
+                              text: "Save",
+                              onPress: () => {
+                                if (selectedRoutine) {
+                                  setSavedRoutines((previous) => [
+                                    ...previous,
+                                    selectedRoutine,
+                                  ]);
+                                  setRecommendedWorkoutPage(false);
+                                  saveRoutineToFirestore(selectedRoutine);
+                                }
+                              },
+                            },
+                          ],
+                          { cancelable: true }
+                        )
+                      }
+                      style={styles.editWorkoutButton}
+                    >
+                      <Ionicons name="save-outline" size={24} color="white" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => setRecommendedWorkoutPage(false)}
+                      style={styles.editWorkoutButton}
+                    >
+                      <Ionicons name="close" size={24} color="white" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <ScrollView>
+                  {selectedRoutine?.exercises.map((exercise, exerciseIndex) => (
+                    <View
+                      key={exerciseIndex}
+                      style={styles.exerciseDetailsCard}
+                    >
+                      <Text style={styles.exerciseDetailsName}>
+                        {exercise.name}
+                      </Text>
+                      <View style={styles.detailSetsContainer}>
+                        {exercise.sets.map((set, setIndex) => (
+                          <View key={setIndex} style={styles.detailsCardRow}>
+                            <Text style={styles.detailsSetNumber}>
+                              Set {setIndex + 1}
+                            </Text>
+                            <Text style={styles.detailsCardText}>
+                              {set.weight ? `${set.weight} kg` : "Bodyweight"} ×{" "}
+                              {set.reps} reps
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
           </Modal>
         </Modal>
       </View>
@@ -1369,7 +1634,7 @@ const WorkoutScreen: React.FC = () => {
                         </Text>
                         <TouchableOpacity
                           onPress={() => removeExerciseFromEdit(exerciseIndex)}
-                          style={styles.removeExerciseButton}
+                          style={styles.editWorkoutButton}
                         >
                           <Ionicons
                             name="trash-outline"
@@ -1517,7 +1782,7 @@ const WorkoutScreen: React.FC = () => {
                     </Text>
                     <TouchableOpacity
                       onPress={() => removeExerciseFromEdit(exerciseIndex)}
-                      style={styles.removeExerciseButton}
+                      style={styles.editWorkoutButton}
                     >
                       <Ionicons
                         name="trash-outline"
@@ -1579,7 +1844,7 @@ const WorkoutScreen: React.FC = () => {
                       });
                       setAddedExercises(updated);
                     }}
-                    style={styles.addSetButton}
+                    style={styles.editWorkoutButton}
                   >
                     <Text style={styles.addSetText}>+ Add Set</Text>
                   </TouchableOpacity>
@@ -2061,9 +2326,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 12,
   },
-  removeExerciseButton: {
-    padding: 8,
-  },
   editSetRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -2081,9 +2343,6 @@ const styles = StyleSheet.create({
     color: "#fff",
     padding: 10,
     borderRadius: 8,
-  },
-  addSetButton: {
-    padding: 8,
   },
   editWorkoutFooter: {
     flexDirection: "row",
@@ -2224,9 +2483,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 1)",
   },
-  savedRoutines: {
-    flex: 1,
-  },
   addRoutineHeader: {
     height: 90,
     flexDirection: "row",
@@ -2304,6 +2560,98 @@ const styles = StyleSheet.create({
     alignContent: "center",
     justifyContent: "center",
     width: "80%",
+  },
+  exploreScrollView: {
+    marginVertical: 20,
+    paddingLeft: 28,
+  },
+  exploreSubheader: {
+    paddingTop: 10,
+    paddingLeft: 28,
+    fontSize: 18,
+    color: "rgba(211, 211, 211, 1)",
+    fontWeight: 500,
+  },
+  categoryCard: {
+    backgroundColor: "rgba(133, 133, 133, 0.4)",
+    height: 120,
+    width: 100,
+    borderRadius: 26,
+    marginRight: 10,
+  },
+  iconContainer: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(238, 238, 238, 1)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  icon: {
+    width: 24,
+    height: 24,
+    resizeMode: "contain",
+  },
+  groupNameContainer: {
+    position: "absolute",
+    bottom: 14,
+    left: 12,
+    right: 10,
+    alignItems: "flex-start",
+  },
+  categoryText: {
+    color: "rgba(255,255,255,1)",
+    fontWeight: "600",
+  },
+  routineSection: {
+    marginTop: 10,
+    paddingHorizontal: 20,
+  },
+  routineTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#fff",
+  },
+  sectionHeader: {
+    fontSize: 18,
+    fontWeight: "500",
+    marginVertical: 12,
+    marginLeft: 16,
+    color: "rgba(211, 211, 211, 1)",
+  },
+  routineUser: {
+    marginTop: 4,
+    fontSize: 12,
+    color: "#555",
+  },
+  exploreCommunityEmpty: {
+    paddingLeft: 16,
+    color: "rgba(255, 255, 255, 0.5)",
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 12,
+  },
+  othersRoutineCard: {
+    padding: 16,
+    marginBottom: 12,
+    marginLeft: 12,
+    backgroundColor: "#1e1e1e",
+    borderRadius: 10,
+    width: 360,
+    alignContent: "center",
+  },
+  othersRoutineTitle: {
+    fontSize: 18,
+    fontWeight: 500,
+    color: "rgba(255,255,255,1)",
+    marginBottom: 6,
+  },
+  exerciseList: {
+    fontSize: 14,
+    color: "rgba(221, 221, 221, 1)",
   },
 });
 
