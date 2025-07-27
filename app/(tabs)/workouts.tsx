@@ -87,7 +87,6 @@ const WorkoutScreen: React.FC = () => {
     []
   );
   const [recommendedWorkoutPage, setRecommendedWorkoutPage] = useState(false);
-  const [selectedGroup, setSelectedGroup] = useState("");
   const muscleGroups = [
     "Bicep",
     "Chest",
@@ -655,6 +654,7 @@ const WorkoutScreen: React.FC = () => {
       <View style={styles.routinesSection}>
         <Text style={styles.subHeader}>Routines</Text>
         <View style={styles.routineRow}>
+          {/* My Routines Button*/}
           <TouchableOpacity
             style={styles.routineBox}
             onPress={() => setAddRoutinePage(true)}
@@ -662,7 +662,7 @@ const WorkoutScreen: React.FC = () => {
             <Ionicons name="document-text-outline" size={24} color="white" />
             <Text style={styles.routineText}>My Routines</Text>
           </TouchableOpacity>
-
+          {/* Explore Routines Button*/}
           <TouchableOpacity
             style={styles.routineBox}
             onPress={() => setExplorePage(true)}
@@ -671,6 +671,7 @@ const WorkoutScreen: React.FC = () => {
             <Text style={styles.routineText}>Explore Routines</Text>
           </TouchableOpacity>
         </View>
+        {/*My Routines Page */}
         <Modal
           visible={addRoutinePage}
           transparent={true}
@@ -761,6 +762,7 @@ const WorkoutScreen: React.FC = () => {
             </View>
           </View>
 
+          {/*Add new routines page*/}
           <Modal
             visible={routineStartedPage}
             animationType="slide"
@@ -914,6 +916,7 @@ const WorkoutScreen: React.FC = () => {
               </View>
             </SafeAreaView>
 
+            {/* Modal to add exercises to new routine*/}
             <AddExerciseModal
               visible={addExercisePage}
               onClose={() => {
@@ -932,6 +935,7 @@ const WorkoutScreen: React.FC = () => {
             />
           </Modal>
 
+          {/* Modal to show detailed information about a routine*/}
           <Modal
             visible={routineDetailPage}
             animationType="slide"
@@ -1032,6 +1036,10 @@ const WorkoutScreen: React.FC = () => {
                       timerRef.current = setInterval(() => {
                         setElapsedTime((prev) => prev + 1);
                       }, 1000);
+                      setAddedExercises([
+                        ...(selectedRoutine?.exercises || []),
+                      ]);
+                      setWorkoutStartedPage(true);
                     }}
                   >
                     <Text style={styles.workoutButtonText}>
@@ -1041,8 +1049,187 @@ const WorkoutScreen: React.FC = () => {
                 </View>
               </View>
             </View>
+            {/* Started workout for saved routine in progress displayed, allow editing reps, weights and exercises*/}
+            <Modal
+              visible={workoutStartedPage}
+              animationType="slide"
+              transparent={true}
+            >
+              <View style={styles.workoutProgressOverlay}>
+                <View style={styles.workoutProgressContent}>
+                  <View style={styles.workoutProgressHeader}>
+                    <View style={styles.workoutIconBox}>
+                      <TouchableOpacity
+                        onPress={() => setWorkoutStartedPage(false)}
+                      >
+                        <Ionicons
+                          name="chevron-down"
+                          size={28}
+                          color="rgb(255, 255, 255)"
+                        />
+                      </TouchableOpacity>
+                      <Text style={styles.currentWorkoutText}>
+                        Current Workout
+                      </Text>
+                    </View>
+
+                    <TouchableOpacity
+                      style={styles.finishWorkoutButton}
+                      onPress={finishWorkout}
+                    >
+                      <Text style={styles.workoutButtonText}>Finish</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.scrollableContent}>
+                    <ScrollView showsVerticalScrollIndicator={false}>
+                      <View style={styles.durationContainer}>
+                        <Text style={styles.timerText}>
+                          {formatDuration(elapsedTime)}
+                        </Text>
+                      </View>
+
+                      {addedExercises.length === 0 ? (
+                        <Text style={styles.noExercisesText}>
+                          No exercises added.
+                        </Text>
+                      ) : (
+                        addedExercises.map((exercise, exerciseIndex) => (
+                          <View
+                            key={exerciseIndex}
+                            style={styles.addedExercises}
+                          >
+                            <View style={styles.editExerciseHeader}>
+                              <Text style={styles.exercisesAddedText}>
+                                {exercise.name}
+                              </Text>
+                              <TouchableOpacity
+                                onPress={() =>
+                                  removeExerciseFromEdit(exerciseIndex)
+                                }
+                                style={styles.editWorkoutButton}
+                              >
+                                <Ionicons
+                                  name="trash-outline"
+                                  size={20}
+                                  color="#ff4c4c"
+                                />
+                              </TouchableOpacity>
+                            </View>
+                            {exercise.sets.map((set, setIndex) => (
+                              <View
+                                key={setIndex}
+                                style={{
+                                  flexDirection: "row",
+                                  justifyContent: "space-between",
+                                  marginBottom: 8,
+                                }}
+                              >
+                                <TextInput
+                                  placeholder="Weight"
+                                  placeholderTextColor="rgba(170,170,170,1)"
+                                  value={set.weight.toString()}
+                                  onChangeText={(text) => {
+                                    const updated = [...addedExercises];
+                                    updated[exerciseIndex].sets[
+                                      setIndex
+                                    ].weight = Number(text);
+                                    setAddedExercises(updated);
+                                  }}
+                                  style={styles.setInput}
+                                  keyboardType="numeric"
+                                />
+                                <TextInput
+                                  placeholder="Reps"
+                                  placeholderTextColor="rgba(170,170,170,1)"
+                                  value={set.reps.toString()}
+                                  onChangeText={(text) => {
+                                    const updated = [...addedExercises];
+                                    updated[exerciseIndex].sets[setIndex].reps =
+                                      Number(text);
+                                    setAddedExercises(updated);
+                                  }}
+                                  style={styles.setInput}
+                                  keyboardType="numeric"
+                                />
+                                <TouchableOpacity
+                                  onPress={() => {
+                                    const updated = [...addedExercises];
+                                    updated[exerciseIndex].sets.splice(
+                                      setIndex,
+                                      1
+                                    );
+                                    setAddedExercises(updated);
+                                  }}
+                                >
+                                  <Ionicons
+                                    name="close"
+                                    size={32}
+                                    color="red"
+                                    style={{ paddingRight: 2 }}
+                                  />
+                                </TouchableOpacity>
+                              </View>
+                            ))}
+                            <TouchableOpacity
+                              onPress={() => {
+                                const updated = [...addedExercises];
+                                updated[exerciseIndex].sets.push({
+                                  weight: 0,
+                                  reps: 0,
+                                });
+                                setAddedExercises(updated);
+                              }}
+                            >
+                              <Text style={styles.addSetText}>+ Add Set</Text>
+                            </TouchableOpacity>
+                          </View>
+                        ))
+                      )}
+                    </ScrollView>
+                  </View>
+
+                  <View style={styles.fixedButtonsContainer}>
+                    <TouchableOpacity
+                      style={styles.cancelWorkoutButton}
+                      onPress={cancelWorkout}
+                    >
+                      <Text style={styles.workoutButtonText}>
+                        Cancel Workout
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.addExerciseButton}
+                      onPress={() => setAddExercisePage(true)}
+                    >
+                      <Text style={styles.workoutButtonText}>Add Exercise</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+
+              {/* Modal for adding exercises*/}
+              <AddExerciseModal
+                visible={addExercisePage}
+                onClose={() => {
+                  setAddExercisePage(false);
+                  setSearchText("");
+                }}
+                searchText={searchText}
+                setSearchText={setSearchText}
+                filteredWorkouts={filteredWorkouts}
+                addedExercises={addedExercises}
+                setAddedExercises={setAddedExercises}
+                exerciseAlreadyAdded={exerciseAlreadyAdded}
+                onExerciseClicked={(exercise) => setSelectedExercise(exercise)}
+                selected={selectedExercise}
+                styles={styles}
+              />
+            </Modal>
           </Modal>
 
+          {/* Modal to edit saved routines*/}
           <Modal
             visible={editRoutinePage}
             animationType="slide"
@@ -1176,6 +1363,7 @@ const WorkoutScreen: React.FC = () => {
                 </View>
               </View>
             </View>
+            {/* Modal to add exercises for routine you are currently editing*/}
             <AddExerciseModal
               visible={addExercisePage}
               onClose={() => {
@@ -1195,6 +1383,7 @@ const WorkoutScreen: React.FC = () => {
           </Modal>
         </Modal>
 
+        {/* Opens explore routines page*/}
         <Modal visible={explorePage} animationType="slide" transparent={false}>
           <View style={styles.container}>
             <View style={styles.addRoutineHeader}>
@@ -1213,6 +1402,7 @@ const WorkoutScreen: React.FC = () => {
             </View>
             <ScrollView style={{ flex: 1 }}>
               <Text style={styles.exploreSubheader}>Recommended Workouts</Text>
+              {/* Horizontal scroll interface for recommended routines*/}
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -1240,6 +1430,7 @@ const WorkoutScreen: React.FC = () => {
                 ))}
               </ScrollView>
 
+              {/* Vertical scroll interface for other routines by community members*/}
               <View style={{ flex: 1, paddingLeft: 14 }}>
                 <Text style={styles.sectionHeader}>Your Community</Text>
                 {otherUsersRoutines.length === 0 ? (
@@ -1274,6 +1465,7 @@ const WorkoutScreen: React.FC = () => {
               </View>
             </ScrollView>
           </View>
+          {/*Displays details of recommended workouts*/}
           <Modal
             visible={recommendedWorkoutPage}
             animationType="slide"
@@ -1361,6 +1553,7 @@ const WorkoutScreen: React.FC = () => {
         </Modal>
       </View>
 
+      {/* Previous workouts section in main workout screen*/}
       <View style={{ flex: 1 }}>
         <ScrollView>
           {savedWorkouts.length > 0 ? (
@@ -1448,6 +1641,7 @@ const WorkoutScreen: React.FC = () => {
         </ScrollView>
       </View>
 
+      {/* Start button / In progress buttons*/}
       <View style={styles.workoutButtonSection}>
         {startTime && !workoutStartedPage ? (
           <View style={styles.workoutInProgressContainer}>
@@ -1501,6 +1695,7 @@ const WorkoutScreen: React.FC = () => {
         )}
       </View>
 
+      {/* Open detailed information on completed workouts*/}
       <Modal
         visible={workoutDetailPage}
         animationType="slide"
@@ -1586,6 +1781,7 @@ const WorkoutScreen: React.FC = () => {
         </View>
       </Modal>
 
+      {/* Current workout in progress displayed, allow editing reps, weights and exercises*/}
       <Modal
         visible={workoutStartedPage}
         animationType="slide"
@@ -1730,6 +1926,7 @@ const WorkoutScreen: React.FC = () => {
           </View>
         </View>
 
+        {/* Modal for adding exercises*/}
         <AddExerciseModal
           visible={addExercisePage}
           onClose={() => {
@@ -1748,6 +1945,7 @@ const WorkoutScreen: React.FC = () => {
         />
       </Modal>
 
+      {/* Modal for editing previous workouts*/}
       <Modal visible={editWorkoutPage} animationType="slide" transparent={true}>
         <View style={styles.editWorkoutOverlay}>
           <View style={styles.editWorkoutContent}>
@@ -1870,6 +2068,7 @@ const WorkoutScreen: React.FC = () => {
             </View>
           </View>
         </View>
+        {/* Modal for adding new exercises for previous workouts*/}
         <AddExerciseModal
           visible={addExercisePage}
           onClose={() => {
@@ -2389,7 +2588,7 @@ const styles = StyleSheet.create({
   },
   exerciseDemoPic: {
     width: "100%",
-    marginTop: 36,
+    marginTop: 20,
     height: "100%",
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
@@ -2397,7 +2596,7 @@ const styles = StyleSheet.create({
   exerciseDemoContainer: {
     width: "100%",
     height: 240,
-    backgroundColor: "rgba(250, 250, 250, 0.9)",
+    backgroundColor: "rgba(244, 244, 244, 1)",
   },
   imageModal: {
     flex: 1,
