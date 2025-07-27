@@ -78,6 +78,8 @@ export default function Index() {
             style={styles.input}
             value={email}
             onChangeText={setEmail}
+            testID="login-email"
+            placeholder="email"
             placeholderTextColor="#aaa"
           />
         </View>
@@ -95,6 +97,8 @@ export default function Index() {
             style={styles.input}
             value={password}
             onChangeText={setPassword}
+            testID="login-password"
+            placeholder="password"
             placeholderTextColor="#aaa"
             secureTextEntry
           />
@@ -159,6 +163,8 @@ export default function Index() {
                       style={styles.input}
                       value={email}
                       onChangeText={setEmail}
+                      testID="signup-email"
+                      placeholder="email"
                       placeholderTextColor="#aaa"
                     />
                   </View>
@@ -176,6 +182,8 @@ export default function Index() {
                       style={styles.input}
                       value={password}
                       onChangeText={setPassword}
+                      testID="signup-password"
+                      placeholder="password"
                       placeholderTextColor="#aaa"
                       secureTextEntry
                     />
@@ -209,6 +217,7 @@ export default function Index() {
                       style={styles.input}
                       value={username}
                       onChangeText={setUsername}
+                      placeholder="username"
                       placeholderTextColor="#aaa"
                     />
                   </View>
@@ -226,6 +235,7 @@ export default function Index() {
                       style={styles.input}
                       value={name}
                       onChangeText={setName}
+                      placeholder="name"
                       placeholderTextColor="#aaa"
                     />
                   </View>
@@ -246,6 +256,7 @@ export default function Index() {
                         setWeight(parseFloat(text.replace(/[^0-9.]/g, "")))
                       }
                       placeholderTextColor="#aaa"
+                      placeholder="weight"
                       keyboardType="numeric"
                     />
                   </View>
