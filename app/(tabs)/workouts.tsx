@@ -269,6 +269,7 @@ const WorkoutScreen: React.FC = () => {
     setCurrentRoutineEdited(routine);
     setAddedExercisesCache(addedExercises);
     setAddedExercises([...routine.exercises]);
+    setRoutineTitle(routine.title);
     setEditRoutinePage(true);
     setRoutineDetailPage(false);
   };
@@ -370,7 +371,7 @@ const WorkoutScreen: React.FC = () => {
         previous.filter((routine) => routine.id !== routineId)
       );
     } catch (error) {
-      Alert.alert("Error", "Failed to delete workout");
+      Alert.alert("Error", "Failed to delete routine");
     }
   };
 
@@ -587,7 +588,7 @@ const WorkoutScreen: React.FC = () => {
       const routineRef = doc(db, "routines", routineId);
       await deleteDoc(routineRef);
     } catch (error) {
-      Alert.alert("Error", "Unable to delete workout");
+      Alert.alert("Error", "Unable to delete routine");
     }
   };
 
@@ -1494,14 +1495,25 @@ const WorkoutScreen: React.FC = () => {
                             { text: "Cancel" },
                             {
                               text: "Save",
-                              onPress: () => {
+                              onPress: async () => {
                                 if (selectedRoutine) {
-                                  setSavedRoutines((previous) => [
-                                    ...previous,
-                                    selectedRoutine,
-                                  ]);
-                                  setRecommendedWorkoutPage(false);
-                                  saveRoutineToFirestore(selectedRoutine);
+                                  try {
+                                    const routineId = await saveRoutineToFirestore(selectedRoutine);
+                                    if (routineId) {
+                                      const savedRoutine = {
+                                        ...selectedRoutine,
+                                        id: routineId,
+                                        userId: user?.uid || '',
+                                      };
+                                      setSavedRoutines((previous) => [
+                                        ...previous,
+                                        savedRoutine,
+                                      ]);
+                                    }
+                                    setRecommendedWorkoutPage(false);
+                                  } catch (error) {
+                                    Alert.alert("Error", "Failed to save routine");
+                                  }
                                 }
                               },
                             },
