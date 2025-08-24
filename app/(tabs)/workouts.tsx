@@ -679,19 +679,19 @@ const WorkoutScreen: React.FC = () => {
           animationType="slide"
         >
           <View style={styles.addRoutineModal}>
-            <View style={styles.addRoutineHeader}>
-              <TouchableOpacity onPress={() => setAddRoutinePage(false)}>
+            <View style={styles.workoutProgressHeader}>
+              <TouchableOpacity
+                onPress={() => setAddRoutinePage(false)}
+                style={styles.downButton}
+              >
                 <Ionicons
                   name="chevron-back"
                   size={28}
                   color="rgba(255, 255, 255, 1)"
-                  style={styles.routineBackButton}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 />
               </TouchableOpacity>
-              <View style={styles.headerTitleContainer}>
-                <Text style={styles.headerText}>Routines</Text>
-              </View>
+              <Text style={styles.headerText}>Routines</Text>
             </View>
 
             <ScrollView style={{ flex: 1 }}>
@@ -770,40 +770,40 @@ const WorkoutScreen: React.FC = () => {
             transparent={false}
           >
             <SafeAreaView style={[styles.workoutProgressOverlay]}>
-              <View style={styles.workoutProgressContent}>
-                <View style={styles.workoutIconBox}>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setRoutineStartedPage(false), setAddedExercises([]);
+              <View style={styles.addRoutineHeader}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setRoutineStartedPage(false), setAddedExercises([]);
+                  }}
+                  style={styles.downButton}
+                >
+                  <Ionicons
+                    name="chevron-down"
+                    size={28}
+                    color="rgb(255, 255, 255)"
+                  />
+                </TouchableOpacity>
+                <View style={styles.routineTitleContainer}>
+                  <Ionicons name="pencil" size={18} color="#aaa" />
+                  <TextInput
+                    placeholder="Enter Routine Title"
+                    placeholderTextColor="rgba(170,170,170,1)"
+                    value={routineTitle}
+                    onChangeText={(text) => {
+                      setRoutineTitle(text);
                     }}
-                  >
-                    <Ionicons
-                      name="chevron-down"
-                      size={28}
-                      color="rgb(255, 255, 255)"
-                    />
-                  </TouchableOpacity>
-                  <View style={styles.routineTitleContainer}>
-                    <Ionicons name="pencil" size={18} color="#aaa" />
-                    <TextInput
-                      placeholder="Enter Routine Title"
-                      placeholderTextColor="rgba(170,170,170,1)"
-                      value={routineTitle}
-                      onChangeText={(text) => {
-                        setRoutineTitle(text);
-                      }}
-                      style={styles.routineTitleInput}
-                    />
-                  </View>
-
-                  <TouchableOpacity
-                    style={styles.finishWorkoutButton}
-                    onPress={finishRoutine}
-                  >
-                    <Text style={styles.workoutButtonText}>Finish</Text>
-                  </TouchableOpacity>
+                    style={styles.routineTitleInput}
+                  />
                 </View>
 
+                <TouchableOpacity
+                  style={styles.finishWorkoutButton}
+                  onPress={finishRoutine}
+                >
+                  <Text style={styles.workoutButtonText}>Finish</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.workoutProgressContent}>
                 <View style={styles.scrollableContent}>
                   <ScrollView showsVerticalScrollIndicator={false}>
                     {addedExercises.length === 0 ? (
@@ -1056,32 +1056,28 @@ const WorkoutScreen: React.FC = () => {
               animationType="slide"
               transparent={true}
             >
-              <View style={styles.workoutProgressOverlay}>
+              <View style={styles.addRoutineModal}>
+                <View style={styles.workoutProgressHeader}>
+                  <TouchableOpacity
+                    onPress={() => setWorkoutStartedPage(false)}
+                    style={styles.downButton}
+                  >
+                    <Ionicons
+                      name="chevron-down"
+                      size={28}
+                      color="rgb(255, 255, 255)"
+                    />
+                  </TouchableOpacity>
+                  <Text style={styles.headerText}>Current Workout</Text>
+
+                  <TouchableOpacity
+                    style={styles.finishWorkoutButton}
+                    onPress={finishWorkout}
+                  >
+                    <Text style={styles.workoutButtonText}>Finish</Text>
+                  </TouchableOpacity>
+                </View>
                 <View style={styles.workoutProgressContent}>
-                  <View style={styles.workoutProgressHeader}>
-                    <View style={styles.workoutIconBox}>
-                      <TouchableOpacity
-                        onPress={() => setWorkoutStartedPage(false)}
-                      >
-                        <Ionicons
-                          name="chevron-down"
-                          size={28}
-                          color="rgb(255, 255, 255)"
-                        />
-                      </TouchableOpacity>
-                      <Text style={styles.currentWorkoutText}>
-                        Current Workout
-                      </Text>
-                    </View>
-
-                    <TouchableOpacity
-                      style={styles.finishWorkoutButton}
-                      onPress={finishWorkout}
-                    >
-                      <Text style={styles.workoutButtonText}>Finish</Text>
-                    </TouchableOpacity>
-                  </View>
-
                   <View style={styles.scrollableContent}>
                     <ScrollView showsVerticalScrollIndicator={false}>
                       <View style={styles.durationContainer}>
@@ -1386,24 +1382,25 @@ const WorkoutScreen: React.FC = () => {
 
         {/* Opens explore routines page*/}
         <Modal visible={explorePage} animationType="slide" transparent={false}>
-          <View style={styles.container}>
-            <View style={styles.addRoutineHeader}>
-              <TouchableOpacity onPress={() => setExplorePage(false)}>
+          <View style={styles.addRoutineModal}>
+            <View style={styles.workoutProgressHeader}>
+              <TouchableOpacity
+                onPress={() => setExplorePage(false)}
+                style={styles.downButton}
+              >
                 <Ionicons
                   name="chevron-back"
                   size={28}
                   color="rgba(255, 255, 255, 1)"
-                  style={styles.routineBackButton}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 />
               </TouchableOpacity>
-              <View style={styles.headerTitleContainer}>
-                <Text style={styles.headerText}>Explore Routines</Text>
-              </View>
+              <Text style={styles.headerText}>Explore Routines</Text>
             </View>
+
             <ScrollView style={{ flex: 1 }}>
               <Text style={styles.exploreSubheader}>Recommended Workouts</Text>
-              {/* Horizontal scroll interface for recommended routines*/}
+              {/* Horizontal scroll bar for recommended routines*/}
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -1498,12 +1495,15 @@ const WorkoutScreen: React.FC = () => {
                               onPress: async () => {
                                 if (selectedRoutine) {
                                   try {
-                                    const routineId = await saveRoutineToFirestore(selectedRoutine);
+                                    const routineId =
+                                      await saveRoutineToFirestore(
+                                        selectedRoutine
+                                      );
                                     if (routineId) {
                                       const savedRoutine = {
                                         ...selectedRoutine,
                                         id: routineId,
-                                        userId: user?.uid || '',
+                                        userId: user?.uid || "",
                                       };
                                       setSavedRoutines((previous) => [
                                         ...previous,
@@ -1512,7 +1512,10 @@ const WorkoutScreen: React.FC = () => {
                                     }
                                     setRecommendedWorkoutPage(false);
                                   } catch (error) {
-                                    Alert.alert("Error", "Failed to save routine");
+                                    Alert.alert(
+                                      "Error",
+                                      "Failed to save routine"
+                                    );
                                   }
                                 }
                               },
@@ -1799,28 +1802,28 @@ const WorkoutScreen: React.FC = () => {
         animationType="slide"
         transparent={true}
       >
-        <View style={styles.workoutProgressOverlay}>
+        <View style={styles.addRoutineModal}>
+          <View style={styles.workoutProgressHeader}>
+            <TouchableOpacity
+              onPress={() => setWorkoutStartedPage(false)}
+              style={styles.downButton}
+            >
+              <Ionicons
+                name="chevron-down"
+                size={28}
+                color="rgb(255, 255, 255)"
+              />
+            </TouchableOpacity>
+            <Text style={styles.headerText}>Current Workout</Text>
+
+            <TouchableOpacity
+              style={styles.finishWorkoutButton}
+              onPress={finishWorkout}
+            >
+              <Text style={styles.workoutButtonText}>Finish</Text>
+            </TouchableOpacity>
+          </View>
           <View style={styles.workoutProgressContent}>
-            <View style={styles.workoutProgressHeader}>
-              <View style={styles.workoutIconBox}>
-                <TouchableOpacity onPress={() => setWorkoutStartedPage(false)}>
-                  <Ionicons
-                    name="chevron-down"
-                    size={28}
-                    color="rgb(255, 255, 255)"
-                  />
-                </TouchableOpacity>
-                <Text style={styles.currentWorkoutText}>Current Workout</Text>
-              </View>
-
-              <TouchableOpacity
-                style={styles.finishWorkoutButton}
-                onPress={finishWorkout}
-              >
-                <Text style={styles.workoutButtonText}>Finish</Text>
-              </TouchableOpacity>
-            </View>
-
             <View style={styles.scrollableContent}>
               <ScrollView showsVerticalScrollIndicator={false}>
                 <View style={styles.durationContainer}>
@@ -2115,7 +2118,7 @@ const styles = StyleSheet.create({
   headerText: {
     fontSize: 18,
     color: "rgba(255,255,255,1)",
-    fontWeight: "600",
+    position: "relative",
   },
   routinesSection: {
     marginTop: 24,
@@ -2313,39 +2316,38 @@ const styles = StyleSheet.create({
   workoutProgressOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,1)",
-    paddingTop: 16,
+    paddingTop: 0,
+  },
+  downButton: {
+    position: "absolute",
+    left: 24,
+    top: 0,
   },
   workoutProgressContent: {
     flex: 1,
     backgroundColor: "rgb(0, 0, 0)",
     borderRadius: 12,
-    padding: 16,
+    paddingHorizontal: 28,
   },
   workoutProgressHeader: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 20,
-    gap: 130,
-  },
-  workoutIconBox: {
-    flexDirection: "row",
-    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+    paddingTop: 4,
   },
   finishWorkoutButton: {
     backgroundColor: "rgb(46, 124, 226)",
-    paddingBottom: 8,
-    paddingTop: 8,
+    paddingBottom: 6,
+    paddingTop: 6,
     paddingLeft: 10,
     paddingRight: 10,
     borderRadius: 15,
     alignItems: "center",
-    marginVertical: 10,
-  },
-  currentWorkoutText: {
-    color: "rgba(255,255,255,1)",
-    fontSize: 18,
-    fontWeight: "600",
-    marginLeft: 16,
+    position: "absolute",
+    right: 16,
+    top: 0,
   },
   scrollableContent: {
     flex: 1,
@@ -2379,7 +2381,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     gap: 12,
-    paddingTop: 16,
+    paddingBottom: 20,
     borderTopWidth: 1,
     borderTopColor: "rgba(255,255,255,0.1)",
   },
@@ -2458,7 +2460,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0, 1)",
     paddingTop: 60,
     paddingBottom: 12,
-    paddingHorizontal: 20,
+    paddingHorizontal: 26,
     flex: 1,
   },
   searchInput: {
@@ -2693,26 +2695,21 @@ const styles = StyleSheet.create({
   addRoutineModal: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 1)",
+    paddingTop: 38,
   },
   addRoutineHeader: {
-    height: 90,
     flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
+    backgroundColor: "rgba(0, 0, 0, 1)",
+    justifyContent: "center",
+    position: "relative",
+    marginBottom: 30,
   },
-
   headerTitleContainer: {
     position: "absolute",
     left: 0,
     right: 0,
     alignItems: "center",
     justifyContent: "center",
-    paddingTop: 40,
-  },
-  routineBackButton: {
-    position: "absolute",
-    height: "100%",
-    padding: 8,
   },
   routineCard: {
     backgroundColor: "rgba(127, 17, 224, 1)",
@@ -2744,7 +2741,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     marginHorizontal: 12,
-    flex: 1,
+    width: 220,
   },
   editRoutineTitleContainer: {
     flexDirection: "row",

@@ -1,15 +1,15 @@
+import { MaterialIcons } from "@expo/vector-icons";
 import React from "react";
 import {
-  Modal,
-  View,
   KeyboardAvoidingView,
+  Modal,
   Platform,
-  TouchableOpacity,
-  Text,
   ScrollView,
   StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { MaterialIcons } from "@expo/vector-icons";
 
 interface StatisticsModalProps {
   visible: boolean;
@@ -27,11 +27,7 @@ const StatisticsModal: React.FC<StatisticsModalProps> = ({
   error,
 }) => {
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent={true}
-    >
+    <Modal visible={visible} animationType="slide" transparent={true}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <KeyboardAvoidingView
@@ -41,7 +37,7 @@ const StatisticsModal: React.FC<StatisticsModalProps> = ({
             <View style={styles.statisticsModalHeader}>
               <TouchableOpacity
                 onPress={onClose}
-                style={{ marginRight: 12 }}
+                style={{ marginRight: 12, paddingLeft: 16 }}
               >
                 <MaterialIcons
                   name="close"
@@ -78,9 +74,7 @@ const StatisticsModal: React.FC<StatisticsModalProps> = ({
                     </View>
 
                     <View style={styles.statisticCard}>
-                      <Text style={styles.statisticTitle}>
-                        Total Workouts
-                      </Text>
+                      <Text style={styles.statisticTitle}>Total Workouts</Text>
                       <Text style={styles.statisticValue}>
                         {statistics.totalWorkouts}
                       </Text>
@@ -147,81 +141,81 @@ const StatisticsModal: React.FC<StatisticsModalProps> = ({
   );
 };
 
-export default StatisticsModal; 
+export default StatisticsModal;
 
 const styles = StyleSheet.create({
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: "rgba(0, 0, 0, 0.5)",
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    modalContent: {
-      position: "absolute",
-      left: 0,
-      right: 0,
-      bottom: 0,
-      width: "100%",
-      height: "80%",
-      backgroundColor: "rgba(0, 0, 0, 1)",
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
-    },
-    statisticsModalHeader: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      width: "100%",
-      marginBottom: 20,
-      marginTop: 10,
-    },
-    statisticsModalTitle: {
-      color: "rgba(255, 255, 255, 1)",
-      fontSize: 24,
-      fontWeight: "bold",
-    },
-    statisticsModalContainer: {
-      backgroundColor: "rgba(0,0,0,1)",
-      justifyContent: "center",
-      padding: 24,
-    },
-    statisticsContent: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    statisticsText: {
-      color: "rgba(255, 255, 255, 1)",
-      fontSize: 18,
-      textAlign: "center",
-    },
-    statisticCard: {
-      backgroundColor: "rgba(34, 34, 34, 1)",
-      borderRadius: 12,
-      padding: 20,
-      marginBottom: 16,
-      borderWidth: 1,
-      borderColor: "rgba(51, 51, 51, 1)",
-      alignItems: "center",
-      width: "100%",
-      height: 100,
-      justifyContent: "flex-start",
-    },
-    statisticTitle: {
-      color: "rgba(255, 255, 255, 1)",
-      fontSize: 18,
-      fontWeight: "600",
-      marginBottom: 8,
-    },
-    statisticValue: {
-      color: "rgba(255, 154, 2, 1)",
-      fontSize: 18,
-      fontWeight: "bold",
-      marginBottom: 4,
-    },
-    statisticDescription: {
-      color: "rgba(170, 170, 170, 1)",
-      fontSize: 12,
-      textAlign: "left",
-    },
-  });
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: "100%",
+    height: "80%",
+    backgroundColor: "rgba(0, 0, 0, 1)",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+  },
+  statisticsModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
+    marginBottom: 20,
+    marginTop: 10,
+  },
+  statisticsModalTitle: {
+    color: "rgba(255, 255, 255, 1)",
+    fontSize: 24,
+    fontWeight: "bold",
+  },
+  statisticsModalContainer: {
+    backgroundColor: "rgba(0,0,0,1)",
+    justifyContent: "center",
+    padding: 24,
+  },
+  statisticsContent: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  statisticsText: {
+    color: "rgba(255, 255, 255, 1)",
+    fontSize: 18,
+    textAlign: "center",
+  },
+  statisticCard: {
+    backgroundColor: "rgba(34, 34, 34, 1)",
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "rgba(51, 51, 51, 1)",
+    alignItems: "center",
+    width: "100%",
+    height: 100,
+    justifyContent: "flex-start",
+  },
+  statisticTitle: {
+    color: "rgba(255, 255, 255, 1)",
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+  statisticValue: {
+    color: "rgba(255, 154, 2, 1)",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 4,
+  },
+  statisticDescription: {
+    color: "rgba(170, 170, 170, 1)",
+    fontSize: 12,
+    textAlign: "left",
+  },
+});

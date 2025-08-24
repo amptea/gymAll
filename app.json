@@ -9,7 +9,10 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "runtimeVersion": {
+        "policy": "appVersion"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -17,7 +20,8 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.amptea.gymall"
+      "package": "com.amptea.gymall",
+      "runtimeVersion": "1.0.0"
     },
     "web": {
       "bundler": "metro",
@@ -46,6 +50,9 @@
         "projectId": "25fb0a4c-9fd7-4406-bd02-1904c1089d15"
       }
     },
-    "owner": "amptea"
+    "owner": "amptea",
+    "updates": {
+      "url": "https://u.expo.dev/25fb0a4c-9fd7-4406-bd02-1904c1089d15"
+    }
   }
 }
