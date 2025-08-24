@@ -64,7 +64,7 @@ With an endless stream of distractions in our lives, it has become increasingly 
 
 # Clone the repository
 
-git clone https://github.com/your-username/gymall.git
+git clone https://github.com/amptea/gymAll.git
 
 # Navigate into the project
 
