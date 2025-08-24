@@ -42,6 +42,8 @@ export default function ProfileScreen() {
   const [leaderboardModalVisible, setLeaderboardModalVisible] = useState(false);
   const [topThreeUsers, setTopThreeUsers] = useState<any[]>([]);
   const [fourthToTenthUsers, setFourthToTenthUsers] = useState<any[]>([]);
+  const [leaderboardHelpModalVisible, setLeaderboardHelpModalVisible] =
+    useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -293,6 +295,21 @@ export default function ProfileScreen() {
                 </TouchableOpacity>
               </View>
               <Text style={styles.leaderboardHeaderText}>Leaderboard</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  Alert.alert(
+                    "How is score calculated?",
+                    "Score is calculated using the following formula: \n\nScore of exercise = (Weight of Rep / Your Weight) * Number of Reps * Number of Sets\n\nThe total score for workout is the sum of score for each exercise completed."
+                  );
+                }}
+              >
+                <Ionicons
+                  name="help-circle-outline"
+                  size={28}
+                  color="white"
+                  style={styles.helpIcon}
+                />
+              </TouchableOpacity>
             </View>
             {/*First three places UI */}
             <View style={styles.topThreeContainer}>
@@ -578,6 +595,7 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     alignContent: "center",
     justifyContent: "center",
+    position: "relative",
   },
   leaderboardHeaderText: {
     fontSize: 20,
@@ -585,11 +603,16 @@ const styles = StyleSheet.create({
     color: "white",
     marginBottom: 24,
     fontFamily: "Inter",
+    position: "relative",
   },
   backButtonIcon: {
     position: "absolute",
     left: 16,
-    paddingTop: 15,
+    top: 15,
+  },
+  helpIcon: {
+    position: "absolute",
+    left: 100,
   },
   userDetails: {
     paddingTop: 6,

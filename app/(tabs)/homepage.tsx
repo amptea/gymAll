@@ -275,20 +275,20 @@ const HomepageScreen: React.FC = () => {
 
       <Modal visible={settingsPage} animationType="slide" transparent={true}>
         <View style={styles.settingsOverlay}>
+          <View style={styles.settingsHeader}>
+            <TouchableOpacity
+              onPress={() => setSettingsPage(false)}
+              style={styles.backButton}
+            >
+              <Ionicons
+                name="chevron-back"
+                size={28}
+                color="rgb(255, 255, 255)"
+              />
+            </TouchableOpacity>
+            <ThemedText style={styles.settingsHeaderText}>Settings</ThemedText>
+          </View>
           <View style={styles.settingsContent}>
-            <View style={styles.settingsHeader}>
-              <TouchableOpacity onPress={() => setSettingsPage(false)}>
-                <Ionicons
-                  name="chevron-back"
-                  size={28}
-                  color="rgb(255, 255, 255)"
-                />
-              </TouchableOpacity>
-              <ThemedText style={styles.settingsHeaderText}>
-                Settings
-              </ThemedText>
-            </View>
-            {/* To be continued, now just shows username and name */}
             <View style={styles.settingsText}>
               <ThemedText>Username: {username}</ThemedText>
               <ThemedText>Name: {name}</ThemedText>
@@ -305,19 +305,20 @@ const HomepageScreen: React.FC = () => {
 
       <Modal visible={addFriendsPage} animationType="slide" transparent={true}>
         <View style={styles.addFriendsOverlay}>
+          <View style={styles.settingsHeader}>
+            <TouchableOpacity
+              onPress={() => setAddFriendsPage(false)}
+              style={styles.backButton}
+            >
+              <Ionicons
+                name="chevron-back"
+                size={28}
+                color="rgb(255, 255, 255)"
+              />
+            </TouchableOpacity>
+            <ThemedText style={styles.addFriendsHeaderText}>Friends</ThemedText>
+          </View>
           <View style={styles.addFriendsContent}>
-            <View style={styles.addFriendsHeader}>
-              <TouchableOpacity onPress={() => setAddFriendsPage(false)}>
-                <Ionicons
-                  name="chevron-back"
-                  size={28}
-                  color="rgb(255, 255, 255)"
-                />
-              </TouchableOpacity>
-              <ThemedText style={styles.addFriendsHeaderText}>
-                Friends
-              </ThemedText>
-            </View>
             <ScrollView>
               <TextInput
                 style={styles.searchInput}
@@ -542,12 +543,12 @@ const styles = StyleSheet.create({
   },
   header: {
     height: 40,
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
     alignItems: "center",
     borderBottomWidth: 1,
     borderBottomColor: "rgba(34,34,34,1)",
     flexDirection: "row",
-    gap: 236,
+    justifyContent: "space-between",
   },
   logoContainer: {
     flexDirection: "row",
@@ -569,18 +570,26 @@ const styles = StyleSheet.create({
   },
   settingsOverlay: {
     flex: 1,
-    paddingTop: 30,
+    paddingTop: 54,
+  },
+  backButton: {
+    position: "absolute",
+    left: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   settingsContent: {
     flex: 1,
     backgroundColor: "rgb(0, 0, 0)",
     borderRadius: 12,
-    padding: 16,
+    paddingHorizontal: 26,
   },
   settingsHeader: {
     flexDirection: "row",
-    gap: 135,
     alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+    backgroundColor: "rgb(0, 0, 0)",
   },
   settingsHeaderText: {
     color: "rgba(255,255,255,1)",
@@ -600,13 +609,14 @@ const styles = StyleSheet.create({
   },
   addFriendsOverlay: {
     flex: 1,
-    paddingTop: 30,
+    paddingTop: 54,
   },
   addFriendsContent: {
     flex: 1,
     backgroundColor: "rgb(0, 0, 0)",
     borderRadius: 12,
-    padding: 16,
+    paddingHorizontal: 24,
+    paddingTop: 16,
   },
   addFriendsHeader: {
     flexDirection: "row",
@@ -683,7 +693,7 @@ const styles = StyleSheet.create({
   },
   homepageContainer: {
     flex: 1,
-    padding: 10,
+    padding: 16,
   },
   signOutText: {
     color: "rgba(255,77,77,1)",
@@ -777,7 +787,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgb(0, 0, 0)",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    padding: 20,
   },
   workoutDetailHeader: {
     flexDirection: "row",

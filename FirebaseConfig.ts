@@ -12,10 +12,8 @@ const firebaseConfig = {
   appId: "1:182263469548:web:dd33ef724383e31abbdcc9",
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firebase Auth with custom persistence
 const auth = initializeAuth(app, {
   persistence: getReactNativePersistence(AsyncStorage),
 });
